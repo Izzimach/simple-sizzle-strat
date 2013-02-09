@@ -5,5 +5,7 @@
 
 /.repl/
 
-#*#
+\#*\#
+._*
 .lein-repl-history
+.Thumbs.db

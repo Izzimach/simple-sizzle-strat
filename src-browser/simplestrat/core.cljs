@@ -1,12 +1,13 @@
 (ns simplestrat.core
   (:require [clojure.browser.dom :as dom]
-            [clojure.browser.repl :as repl]))
+            [clojure.browser.repl :as repl]
+            [simplestrat.preloader :as preloader]))
 
 
 ;;(repl/connect "http://localhost:9000/repl")
 
-;; An instance of an easeljs Stage
-(def gamestage)
+;; gameassets
+(def gameassets)
 
 ;; game state as an atom
 (def gamestate (atom {:stage nil :map nil :characters nil }))
@@ -41,15 +42,16 @@
 
 (defn chooseterrain [x y]
   (if (> x y)
-    :grass
-    :dirt))
+    0
+    3))
 
 (defn generatemap [{:keys [width height]}]
   (for [x (range 0 width)
         y (range 0 height)]
     {:x x :y y :terrain (chooseterrain x y)}))
 
-(defn initeaselold [canvas]
+(comment
+  (defn initeaselold [canvas]
   (let [shape (createjs/Shape.)
         shape-graphics (aget shape "graphics")
         stage (createjs/Stage. canvas)
@@ -63,41 +65,38 @@
     (-> stage
         (putonstage shape 100 100)
         (putonstage text 50 20))
-    (aset text "rotation" 20)))
+    (aset text "rotation" 20))))
 
-(defn processassets [assets]
-  "Given a set of assets, sorts out the assets by type. Produces a map with a key for each asset type (image, sound, etc.). Values are maps from id to resource."
-  (let []
-    ;; each assets has an id, type, and result (data)
-    (js/console.log (clj->js assets))
-    (reduce #(assoc-in %1 [(-> %2 .-item .-type) (-> %2 .-item .-id)] (.-result %2))
-            {}
-            assets)))
+(defn setupboard []
+  ;; should have the gamestate setup by now
+  (let [scale 2
+        tilespacing (* scale 12)
+        stage (:stage @gamestate)
+        gamemap (generatemap {:width 10 :height 10})
+        mapicons (get-in gameassets ["image" "icons"])
+        spritesheet-config (clj->js {:images [mapicons] :frames {:width 12 :height 12}})
+        spritesheet (createjs/SpriteSheet. spritesheet-config)
+        bitmapbase (createjs/BitmapAnimation. spritesheet)]
+    ;; generate a bunch of icons based off of the map data
+    #_(js/console.log mapicons)
+    (doseq [tile gamemap
+            :let [{:keys [x y terrain]} tile
+                  freshtile (.clone bitmapbase)]]
+      (aset freshtile "x" (* x tilespacing))
+      (aset freshtile "y" (* y tilespacing))
+      (aset freshtile "scaleX" scale)
+      (aset freshtile "scaleY" scale)
+      (.gotoAndStop freshtile terrain)
+      (.addChild stage freshtile)
+      )
+    (.update stage)))
 
-(defn preloadcomplete [stage assets]
-  (let [processed (processassets assets)
-        images (get processed "image")]
-;;    (js/console.log (clj->js processed))
-;;    (js/console.log (clj->js (keys processed)))
-;;    (js/console.log (clj->js images))
-    (addimage stage (get images "icons"))))
+(defn startgame [loadedassets]
+  (set! gameassets loadedassets)
+  #_(js/console.log loadedassets)
+  (setupboard))
 
-;;
-;; preloader - loading the assets
-;;
-
-(def manifest [{:src  "gfx/placeholders_tigsource.png" :id "icons"}])
-
-(defn preloadgame [stage]
-  (let [jsmanifest (clj->js manifest)
-        loader (createjs/LoadQueue.)
-        ;; loadedassets really doesn't need to be an atom since JS is
-        ;; single-threaded, but oh well.
-        loadedassets (atom [])
-        accumulateassets #(swap! loadedassets conj %1)]
-    (.addEventListener loader "complete" #(preloadcomplete stage @loadedassets))
-    (.addEventListener loader "fileload" accumulateassets)
-    (.loadManifest loader jsmanifest)))
+(def manifest [{:id "icons" :src "gfx/placeholders_tigsource.png"}])
 
 ;;
 ;; initialization
@@ -106,9 +105,9 @@
 (defn createjsstartgame []
   (let [canvas (dom/get-element "target")
         stage (createjs/Stage. canvas)]
-    (set! gamestage stage)
     (swap! gamestate assoc :stage stage)
-    (preloadgame stage)))
+    ;; the preloader loads all the assets and then calls startgame with the results
+    (preloader/preloadgame stage manifest startgame)))
 
 (set! (.-onload js/window) createjsstartgame)
 ;;(set! (.-onload js/window) craftystartgame)
