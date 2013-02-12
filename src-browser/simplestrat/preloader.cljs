@@ -12,7 +12,7 @@
             {}
             assets)))
 
-(defn preloadcomplete [stage assets completioncallback]
+(defn preloadcomplete [assets completioncallback]
   "Called when all assets have been loaded by PreloadJS. Groups up the assets by type (image, sound, etc.) and then call the gamestart function with the asset list"
   (let [processed (processassets assets)
         images (get processed "image")]
@@ -25,7 +25,7 @@
 ;; preloader - loading the assets
 ;;
 
-(defn preloadgame [stage manifest callwhendone]
+(defn preloadgame [manifest callwhendone]
   "Preloader to load all assets. Pass in the EaselJS stage (for loading animation) a vector of assets
 to load, and a function to call once all assets have been loaded and processed. Assets are in a map where each key is an asset type (image, sound, etc.) and the value is a second map that maps from assets ID to the actual asset."
   (let [jsmanifest (clj->js manifest)
@@ -34,7 +34,7 @@ to load, and a function to call once all assets have been loaded and processed. 
         ;; single-threaded, but oh well.
         loadedassets (atom [])
         accumulateassets #(swap! loadedassets conj %1)]
-    (.addEventListener loader "complete" #(preloadcomplete stage @loadedassets callwhendone))
+    (.addEventListener loader "complete" #(preloadcomplete @loadedassets callwhendone))
     (.addEventListener loader "fileload" accumulateassets)
     (.loadManifest loader jsmanifest)))
 

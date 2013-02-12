@@ -3,6 +3,8 @@
 /repl/
 /node_modules/
 
+/resources/public/js/simplestrat.js
+
 /.repl/
 
 \#*\#
