@@ -3,7 +3,7 @@
 ;; this is really just a wrapper around the PreloadJS library.
 ;; http://createjs.com/
 
-(defn processassets [assets]
+(defn- processassets [assets]
   "Given a set of assets, sorts out the assets by type. Produces a map with a key for each asset type (image, sound, etc.). Values are maps from id to resource."
   (let []
     ;; each assets has an id, type, and result (data)
@@ -12,7 +12,7 @@
             {}
             assets)))
 
-(defn preloadcomplete [assets completioncallback]
+(defn- preloadcomplete [assets completioncallback]
   "Called when all assets have been loaded by PreloadJS. Groups up the assets by type (image, sound, etc.) and then call the gamestart function with the asset list"
   (let [processed (processassets assets)
         images (get processed "image")]

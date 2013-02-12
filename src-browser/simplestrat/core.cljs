@@ -58,7 +58,7 @@
     (swap! current-gamestate makecharacters)
     (renderer/rebuildmapdisplaylist @current-gamestate)
     (renderer/rebuildcharacterdisplaylist @current-gamestate)
-    (renderer/updatedisplay)))
+    (renderer/redraw)))
 
 (defn startgame [loadedassets]
   (set! simplestrat.gameassets/assets loadedassets)
