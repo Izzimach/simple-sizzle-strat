@@ -11,9 +11,12 @@
 ;; the current game state as an atom
 (def current-gamestate (atom {:map [] :characters [] }))
 
-;; simple state updates: add, remove, and move a character
+;;
+;; character management
+;;
+
 (defn createcharacter [charactername iconindex x y]
-  {:name charactername :iconindex iconindex :x x :y y})
+  {:name charactername :iconindex iconindex :x x :y y :nextaction 1})
 
 (defn update-addcharacter [gamestate freshcharacter]
   (let [modifiedcharacters (conj (:characters gamestate) freshcharacter)]
@@ -29,33 +32,33 @@
   (let [modifiedcharacters (disj (:characters gamestate) character)]
     (assoc gamestate :characters modifiedcharacters)))
 
-(defn makecharacters [gamestate]
-  (let [character1 (createcharacter "bob" 128 5 2)
-        character2 (createcharacter "tom" 130 6 5)
-        character3 (createcharacter "shemp" 191 8 5)]
-    (-> gamestate
-        (update-addcharacter character1)
-        (update-addcharacter character2)
-        (update-addcharacter character3))))
+(defn makestartingcharacters []
+  [(createcharacter "bob" 128 5 2)
+     (createcharacter "tom" 130 6 5)
+     (createcharacter "shemp" 191 8 5)])
+
+;;
+;; terrain/map
+;;
 
 (defn chooseterrain [x y]
   (if (> x y)
     39
     54))
 
-(defn generatemap [{:keys [width height]}]
+(defn makestartingmap [{:keys [width height]}]
   (for [x (range 0 width)
         y (range 0 height)]
     {:x x :y y :terrain (chooseterrain x y)}))
 
-
 (defn setupboard []
   ;; should have the gamestate setup by now
-  (let [gamemap (generatemap {:width 10 :height 10})]
+  (let [gamemap (makestartingmap {:width 10 :height 10})
+        characters (makestartingcharacters)]
     ;; generate a bunch of icons based off of the map data
     #_(js/console.log mapicons)
     (swap! current-gamestate assoc :map gamemap)
-    (swap! current-gamestate makecharacters)
+    (swap! current-gamestate (partial reduce update-addcharacter)  characters)
     (renderer/rebuildmapdisplaylist @current-gamestate)
     (renderer/rebuildcharacterdisplaylist @current-gamestate)
     (renderer/redraw)))

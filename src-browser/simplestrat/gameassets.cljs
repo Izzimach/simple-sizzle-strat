@@ -4,7 +4,8 @@
 ;; for each asset for looking them up later
 (def manifest
   [
-   {:id "icons" :src "gfx/placeholders_tigsource.png"}
+   {:id "icons" :src "gfx/placeholders_tigsource.png"},
+   {:id "GUIbackground" :src "gfx/GUIbackground.png"}
    ]
   )
 
