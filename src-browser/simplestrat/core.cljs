@@ -9,33 +9,31 @@
 
 
 ;; the current game state as an atom
-(def current-gamestate (atom {:map [] :characters [] }))
+(def current-gamestate (atom {:map [] :characters {} }))
 
 ;;
 ;; character management
 ;;
 
-(defn createcharacter [charactername iconindex x y]
-  {:name charactername :iconindex iconindex :x x :y y :nextaction 1})
+(defn createcharacter [charactername id iconindex x y team]
+  {:name charactername :uniqueid id :iconindex iconindex :x x :y y :team team})
 
 (defn update-addcharacter [gamestate freshcharacter]
-  (let [modifiedcharacters (conj (:characters gamestate) freshcharacter)]
-    (assoc gamestate :characters modifiedcharacters)))
+  (assoc-in gamestate [:characters (:uniqueid freshcharacter)] freshcharacter))
 
 (defn update-movecharacter [gamestate character newx newy]
   (let [characters (:characters gamestate)
         movedcharacter (-> character (assoc :x newx) (assoc :y newy))
-        modifiedcharacters (conj (disj characters character) movedcharacter)]
-    (assoc gamestate :characters modifiedcharacters)))
+        uniqueid (:uniqueid movedcharacter)]
+    (assoc-in gamestate [:characters uniqueid] movedcharacter)))
 
 (defn update-removecharacter [gamestate character]
-  (let [modifiedcharacters (disj (:characters gamestate) character)]
-    (assoc gamestate :characters modifiedcharacters)))
+  (clojure.contrib.core/dissoc-in gamestate [:characters (:uniqueid character)]))
 
 (defn makestartingcharacters []
-  [(createcharacter "bob" 128 5 2)
-     (createcharacter "tom" 130 6 5)
-     (createcharacter "shemp" 191 8 5)])
+  [(createcharacter "bob" 1 128 5 2 2)
+   (createcharacter "tom" 2 130 6 5 1)
+   (createcharacter "shemp" 3 191 8 5 1)])
 
 ;;
 ;; terrain/map

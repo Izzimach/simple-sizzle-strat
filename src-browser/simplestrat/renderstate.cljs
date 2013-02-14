@@ -66,7 +66,7 @@
 (defn- displaycharactersprite [renderstate character]
   ;; create sprite if needed
   (let [spritemap (:spritemap renderstate)
-        charactersprite (get spritemap (:iconindex character))
+        charactersprite (get spritemap (:uniqueid character))
         newx (* tilespacing (:x character))
         newy (* tilespacing (:y character))
         characterstage (:stage-characters renderstate)]
@@ -74,44 +74,44 @@
     (makestandardsizeandorigin charactersprite)
     (.addChild characterstage charactersprite)))
 
-(defn- addcharactersprite [spritemap iconindex]
+(defn- addcharactersprite [spritemap character]
   (let [freshbitmap (createjs/BitmapAnimation. (getspritesheet "icons"))
         standardscale spritescale
         hightlightedscale (* 1.2 spritescale)]
     #_(js/console.log iconindex)
     ;; right now sprites are simple animations with one frame.
-    (.gotoAndStop freshbitmap iconindex)
+    (.gotoAndStop freshbitmap (:iconindex character))
     (makestandardsizeandorigin freshbitmap)
     ;; assign mouse handlers to expand this icon a bit when the mouse
     ;; hovers over it
     (aset freshbitmap "mouseEnabled" true)
     (aset freshbitmap "onMouseOver" (fn [_] (scalesprite freshbitmap 1.2) (redraw)))
     (aset freshbitmap "onMouseOut" (fn [_] (makestandardsizeandorigin freshbitmap) (redraw)))
-    (assoc spritemap iconindex freshbitmap))) 
+    (assoc spritemap (:uniqueid character) freshbitmap))) 
 
-(defn- removecharactersprite [spritemap iconindex]
+(defn- removecharactersprite [spritemap character]
   ;; just dissoc and let the GC collect it, I guess
-  (dissoc spritemap iconindex))
+  (dissoc spritemap (:uniqueid character)))
 
-(defn- generatemissingsprites [spritemap missingsprites]
+(defn- generatemissingsprites [spritemap missingcharacters]
   "Looks for characters that do not have a sprite associated with them, creates any missing sprites,
 and returns an updated sprite map which should have all the needed sprites."
-  (reduce addcharactersprite spritemap (seq missingsprites)))
+  (reduce addcharactersprite spritemap (seq missingcharacters)))
 
-(defn- removeunusedsprites [spritemap unusedsprites]
-  (reduce removecharactersprite spritemap (seq  unusedsprites)))
+(defn- removeunusedsprites [spritemap unusedspriteids]
+  (reduce removecharactersprite spritemap (seq unusedspriteids)))
 
 (defn- syncspritemaptocharacters [spritemap characters]
   "Adds sprites for charaters that do not yet have them, and removes any sprites that do not have a character using them"
-  (let [charactericonindices (set (map #(:iconindex %1) characters))
-        spriteiconindices (set (keys spritemap))
-        unusedsprites (difference spriteiconindices charactericonindices)
-        missingsprites (difference charactericonindices spriteiconindices)]
+  (let [characteruniqueids (set (map #(:uniqueid %1) characters))
+        spriteuniqueids (set (keys spritemap))
+        unusedsprites (difference spriteuniqueids characteruniqueids)
+        missingsprites (difference characteruniqueids spriteuniqueids)]
     ;; now add the new sprites and remove the old ones
     ;;(js/console.log (clj->js missingsprites))
     ;;(js/console.log (clj->js unusedsprites))
     (-> spritemap
-        (generatemissingsprites missingsprites)
+        (generatemissingsprites missingsprites characters)
         (removeunusedsprites unusedsprites))))
 
 (defn rebuildcharacterdisplaylist [gamestate]
@@ -148,6 +148,7 @@ and returns an updated sprite map which should have all the needed sprites."
 ;;
 ;; left/right GUI functions
 ;;
+
 
 ;;
 ;; initialization functions
