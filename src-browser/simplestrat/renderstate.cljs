@@ -102,9 +102,9 @@ and returns an updated sprite map which should have all the needed sprites."
 (defn- removeunusedsprites [spritemap unusedspriteids]
   (reduce removecharactersprite spritemap (seq unusedspriteids)))
 
-(defn- syncspritemaptocharacters [spritemap characters]
-  "Adds sprites for charaters that do not yet have them, and removes any sprites that do not have a character using them"
-  (let [characteruniqueids (set (keys characters))
+(defn- syncspritemaptocharacters [spritemap characterseq]
+  "Adds sprites for charaters that do not yet have them, and removes any sprites that do not have a character using them. Returns the updated spritemap."
+  (let [characteruniqueids (set (map :uniqueid characterseq))
         spriteuniqueids (set (keys spritemap))
         unusedspriteids (difference spriteuniqueids characteruniqueids)
         missingspriteids (difference characteruniqueids spriteuniqueids)]
@@ -112,23 +112,26 @@ and returns an updated sprite map which should have all the needed sprites."
     ;;(js/console.log (clj->js spritemap))
     ;;(js/console.log (clj->js missingspriteids))
     ;;(js/console.log (clj->js unusedspriteids))
+    ;;(js/console.log (clj->js (rest characterseq)))
     (-> spritemap
-        (generatemissingsprites (map characters missingspriteids))
+        (generatemissingsprites characterseq)
         (removeunusedsprites unusedspriteids))))
 
-(defn- syncsprites! [spritemapkeyword characters]
-  (let [
-        ;; if spritemap is nil, defaults to {}
+(defn- syncsprites! [spritemapkeyword characterseq]
+  "Updates the sprites used for the given spritemap. Returns the possibly-updated spritemap."
+  (let [;; if spritemap is nil, defaults to {}
         spritemap (or (spritemapkeyword @displayed-renderstate) {})
-        syncedspritemap (syncspritemaptocharacters spritemap characters)]
+        syncedspritemap (syncspritemaptocharacters spritemap characterseq)]
     ;; swap if something changed
-    (if (= spritemap syncedspritemap) nil 
-        (swap! displayed-renderstate assoc spritemapkeyword syncedspritemap))))
+    (if (= spritemap syncedspritemap)
+      nil
+      (swap! displayed-renderstate assoc spritemapkeyword syncedspritemap))
+    syncedspritemap))
 
 (defn rebuildcharacterdisplaylist [gamestate]
   (let [characters (:characters gamestate)]
     ;; mutating step to add missing sprites and remove unused sprites
-    (syncsprites! :mapsprites characters)
+    (syncsprites! :mapsprites (vals characters))
     (let [renderstate @displayed-renderstate
           stage-characters (:stage-characters renderstate)]
       (.removeAllChildren stage-characters)
@@ -158,24 +161,32 @@ and returns an updated sprite map which should have all the needed sprites."
 ;; left/right GUI functions
 ;;
 
-(defn- displaycharacterrostersprite [roster character x y]
-  )
+(defn- displaycharacterrostersprite [rostercontainer rosterspritemap character x y]
+  (let [charactersprite (get rosterspritemap (:uniqueid character))]
+    (positionsprite charactersprite x y)
+    (makestandardsizeandorigin charactersprite)
+    (scalesprite charactersprite 1.8)
+    (.addChild rostercontainer charactersprite)))
+
+(def ^:private teamkeywordmap {1 :team1rostersprites 2 :team2rostersprites})
 
 (defn rebuildrosterdisplaylist [gamestate rosterteam]
-  (let [roster (get (:rostermap @displayed-renderstate) rosterteam)
+  (let [rosterkeyword (get teamkeywordmap rosterteam)
+        rostercontainer (get (:rostermap @displayed-renderstate) rosterteam)
         allcharacters (vals (:characters gamestate))
         teamcharacters (filter #(= (:team %1) rosterteam) allcharacters)
-        orderedteamcharacters (sort-by :uniqueid teamcharacters)
+        orderedteamcharacters (into-array (sort-by :uniqueid teamcharacters))
         rostersize (count teamcharacters)]
-    (.removeAllChildren roster)
-    (syncsprites! :team1rostersprites allcharacters)
-    (let [renderstate @displayed-renderstate
-          rostersprites (:team1rostersprites renderstate)]
+    (.removeAllChildren rostercontainer)
+    ;;(js/console.log rosterkeyword)
+    ;;(js/console.log teamcharacters)
+    (syncsprites! rosterkeyword teamcharacters)
+    (let [rosterspritemap (get @displayed-renderstate rosterkeyword)]
       (doseq [characterindex (range rostersize)
-              character (get orderedteamcharacters characterindex)
-              drawx 0
-              drawy (* tilespacing characterindex)]
-        (displaycharacterrostersprite roster character drawx drawy)))))
+              :let [character (get orderedteamcharacters characterindex)
+                    x 0
+                    y (* 2 tilespacing characterindex)]]
+        (displaycharacterrostersprite rostercontainer rosterspritemap character x y)))))
 
 
 ;;
@@ -201,9 +212,9 @@ and returns an updated sprite map which should have all the needed sprites."
 
 (defn initializeplayarea []
   (let [stage (:stage @displayed-renderstate)
-        tilemap (createeaseljscontainer "tilemap" 100 100)
-        characters (createeaseljscontainer "characters" 100 100)
-        leftRoster (createcharacterroster "team1Roster" 0 100)
+        tilemap (createeaseljscontainer "tilemap" 200 100)
+        characters (createeaseljscontainer "characters" 200 100)
+        leftRoster (createcharacterroster "team1Roster" 50 100)
         rightRoster (createcharacterroster "team2Roster" 500 100)
         rostermap {1 leftRoster 2 rightRoster}]
     (.removeAllChildren stage)

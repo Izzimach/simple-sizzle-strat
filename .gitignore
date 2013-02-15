@@ -2,6 +2,12 @@
 /target/
 /repl/
 /node_modules/
+/classes/
+/checkouts/
+/.env
+/.lein-env
+/.lein-failures
+/.lein-deps-sum
 
 /resources/public/js/simplestrat.js
 
@@ -9,5 +15,7 @@
 
 \#*\#
 ._*
+*~
+.#*
 .lein-repl-history
 .Thumbs.db

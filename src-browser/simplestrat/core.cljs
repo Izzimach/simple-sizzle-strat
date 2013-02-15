@@ -59,6 +59,8 @@
     (swap! current-gamestate (partial reduce update-addcharacter)  characters)
     (renderer/rebuildmapdisplaylist @current-gamestate)
     (renderer/rebuildcharacterdisplaylist @current-gamestate)
+    (renderer/rebuildrosterdisplaylist @current-gamestate 1)
+    (renderer/rebuildrosterdisplaylist @current-gamestate 2)
     (renderer/redraw)))
 
 (defn startgame [loadedassets]
