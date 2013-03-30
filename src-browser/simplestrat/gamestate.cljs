@@ -2,25 +2,42 @@
   (:require [clojure.set]))
 
 ;;
+;; basic game state
+;;
+
+(defn makeemptygamestate []
+  {
+   ;; game map as a set of tiles
+   :map nil
+   ;; all current characters
+   :characters {}
+   ;; which team is active; either :team1 or :team2
+   :activeteam :team2
+   ;; a set of actions left for the active team. includes both move
+   ;; actions and standard actions
+   :actionsleft #{}
+   ;; index of the current turn, used for effects with a duration
+   :turn 0})
+
+;;
 ;; turns
 ;;
 
-(defn- nextturnowner [currentowner]
-  (if (= :team1 currentowner)
-    :team2
-    :team1))
+(defn- nextturnteamfrom [currentturnteam]
+  (if (= :team1 currentturnteam) :team2 :team1))
 
 (defn- charactersforteam [gamestate team]
-  (filter #(= team (:team %))
-          (vals (:characters gamestate))))
+  (filter #(= team (:team %)) (vals (:characters gamestate))))
 
 (defn- actionsforcharacter [character]
   (let [uniqueid (:uniqueid character)]
-    #{ [:moveaction uniqueid] [:attackaction uniqueid] }))
+    #{ [:moveaction uniqueid] [:standardaction uniqueid] }))
 
-(defn- actionsforteam [gamestate team]
-  ;; map keys are character ids, values are a set of actions that
-  ;; character can perform
+(defn- actionsforteam
+  "Produces a set of all the allowed actions for the specified team, by
+  basically gathering up all the actions available to each member of
+  the team."
+  [gamestate team]
   (let [characters (charactersforteam gamestate team)]
     ;;(js/console.log (clj->js team))
     ;;(js/console.log (clj->js characters))
@@ -28,17 +45,28 @@
   )
 
 (defn advanceturn [gamestate]
-  (let [nextteam (nextturnowner (:activeteam gamestate))
-        actions (actionsforteam gamestate nextteam)]
+  (let [nextteam (nextturnteamfrom (:activeteam gamestate))
+        nextactions (actionsforteam gamestate nextteam)
+        nextturn (inc (:turn gamestate))]
     ;;(js/console.log (clj->js actions))
-    (assoc gamestate :activeteam nextteam :actionsleft actions)))
+    (assoc gamestate :activeteam nextteam :actionsleft nextactions :turn nextturn)))
 
 ;;
 ;; character management
 ;;
+(defn createstandardattackaction [name icon range damage]
+  {:action name :range range :damage damage :iconindex icon})
 
 (defn createcharacter [charactername id iconindex x y team]
-  {:name charactername :uniqueid id :iconindex iconindex :x x :y y :team team})
+  {:name charactername
+   :uniqueid id
+   :iconindex iconindex
+   :x x
+   :y y
+   :team team
+   :health 3
+   :move 2
+   :actions [(createstandardattackaction "Default Attack" 67 2 2)]})
 
 (defn update-addcharacter [gamestate freshcharacter]
   (assoc-in gamestate [:characters (:uniqueid freshcharacter)] freshcharacter))
@@ -68,8 +96,11 @@
     ;;(js/console.log movex y (clj->js characters))
     (not-any? ischaracterat? characters)))
 
+(defn- allies? [character1 character2]
+  (= (:team character1) (:team character2)))
+
 (defn- enemies? [character1 character2]
-  (not= (:team character1) (:team character2)))
+  (not (allies? character1 character2)))
 
 (defn moveactionavailablefor [gamestate character]
   (let [moveaction [:moveaction (:uniqueid character)]
@@ -79,12 +110,12 @@
     ;;(js/console.log (clj->js availableactions))
     (not (nil? (get availableactions moveaction)))))
 
-(defn attackactionavailablefor [gamestate character]
-  (let [attackaction [:attackaction (:uniqueid character)]
+(defn standardactionavailablefor [gamestate character]
+  (let [attackaction [:standardaction (:uniqueid character)]
         availableactions (:actionsleft gamestate)]
     (not (nil? (get availableactions attackaction)))))
 
-(defn seqof-movesforcharacter [gamestate character mode]
+(defn seqof-movesforcharacter [gamestate character active-action]
   ;; no moves if the character has no available move action
   (if (moveactionavailablefor gamestate character)
     ;; just list adjacent locations
@@ -100,17 +131,21 @@
     nil
     ))
 
-(defn seqof-attacksforcharacter [gamestate character mode]
+(defn seqof-targetsforcharacter [gamestate character active-action]
   (seq []))
 
-(defn seqof-modesforcharacter [gamestate character mode]
-  (seq []))
+(defn seqof-actionsforcharacter [gamestate character active-action]
+  (seq (:actions character)))
 
-(defn getclickablesfor [gamestate character mode]
-  (let [moves (seqof-movesforcharacter gamestate character mode)
-        attacks (seqof-attacksforcharacter gamestate character mode)
-        modes (seqof-modesforcharacter gamestate character mode)]
-    {:moves moves :attacks attacks :modes modes}))
+(defn getdefaultaction [character]
+  ;; just get the first element in the action vector
+  (-> character :actions (get 0)))
+
+(defn getclickablesfor [gamestate character active-action]
+  (let [moves (seqof-movesforcharacter gamestate character active-action)
+        targets (seqof-targetsforcharacter gamestate character active-action)
+        actions (seqof-actionsforcharacter gamestate character active-action)]
+    {:moves moves :targets targets :actions actions}))
 
 ;;
 ;; terrain/map
@@ -132,10 +167,9 @@
 
 (defn makestartingstate []
   (let [gamemap (makestartingmap {:width 10 :height 10})
-        characters (makestartingcharacters)
-        emptygamestate {:map nil :characters {} :activeteam :team2 :actionsleft {}}]
+        emptygamestate (makeemptygamestate)]
     (-> emptygamestate
         (assoc :map gamemap)
         (addstartingcharacters)
         (advanceturn) ; so team1 basically starts first
-        ))) 
+        )))

@@ -12,7 +12,7 @@
 (def ^:const ^:private rostertilescale 1.8) ; relative to standardtilesize
 (def ^:const ^:private rostertilesize (* rostertilescale standardtilesize))
 
-(def ^:const ^:private mapoffsetpixels [200 200])
+(def ^:const ^:private mapoffsetpixels [200 100])
 
 (def ^:private not-nil? (comp not nil?))
 
@@ -104,15 +104,15 @@
 
 (defn- selectcharacter [character]
   (let [uniqueid (:uniqueid character)
-        renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedcharactermode nil)
+        defaultaction (gamestate/getdefaultaction character)
+        renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedcharacteraction defaultaction)
         gamestate (:gamestate renderstate)
-        overlaydata (gamestate/getclickablesfor gamestate character nil)
-        newrenderstate (rebuildoverlay renderstate overlaydata)
-        ]
+        overlaydata (gamestate/getclickablesfor gamestate character defaultaction)
+        newrenderstate (rebuildoverlay renderstate overlaydata)]
     (reset! displayed-renderstate newrenderstate)
     (redraw newrenderstate)))
 
-(defn- selectcharactermode [character mode]
+(defn- selectcharacteraction [character active-action]
   )
 
 ;;
@@ -120,7 +120,7 @@
 ;; character sprite functions
 ;;
 ;;
-;; current sprite lists [:mapsprites :team1 :team2 :overlay]
+;; current sprite lists [:mapsprites :team1 :team2]
 
 (defn- displaycharactermapsprite [renderstate character]
   (let [sprites (get-in renderstate [:sprites :mapsprites])
@@ -250,17 +250,32 @@ and returns an updated sprite map which should have all the needed sprites."
 ;; draw characters displayed on left/right roster lists
 ;;
 ;;
+(defn- createcharacterinfopanel [renderstate character]
+  (let [sprite-path [:teamGUIs :sprites]
+        panel (createjs/Container.)
+        oldspritemap (get-in renderstate sprite-path)
+        newspritemap (addcharactersprite oldspritemap character)
+        charactersprite (get newspritemap (:uniqueid character))
+        ]
+    (doto charactersprite
+      (aset "x" 0)
+      (aset "y" 0)
+      )
+    (doto panel
+      (.addChild charactersprite))
+    (assoc-in renderstate sprite-path newspritemap))
+  )
 
+(defn- removecharacterinfopanel [renderstate character]
+  )
 
 (defn- highlightcharacterinroster [renderstate character]
   (let [charactersprite (findspriteforcharacter renderstate (:team character) character)]
-    (when charactersprite (scalesprite charactersprite (* 1.2 rostertilescale))))
-  )
+    (when charactersprite (scalesprite charactersprite (* 1.2 rostertilescale)))))
 
 (defn- unhighlightcharacterinroster [renderstate character]
   (let [charactersprite (findspriteforcharacter renderstate (:team character) character)]
-    (when charactersprite (scalesprite charactersprite rostertilescale)))
-  )
+    (when charactersprite (scalesprite charactersprite rostertilescale))))
 
 (defn- displaycharacterrostersprite [rostercontainer rosterspritemap character x y]
   (let [charactersprite (get rosterspritemap (:uniqueid character))]
@@ -268,6 +283,8 @@ and returns an updated sprite map which should have all the needed sprites."
     (makestandardsizeandorigin charactersprite)
     (scalesprite charactersprite rostertilescale)
     (.addChild rostercontainer charactersprite)))
+
+(defn- displaycharacterinfopanel [renderstate character])
 
 (defn- extractteamcharacters [gamestate team]
   (let [allcharacters (vals (:characters gamestate))
@@ -278,7 +295,8 @@ and returns an updated sprite map which should have all the needed sprites."
 
 (defn rebuildteamdisplaylist [renderstate team]
   (let [gamestate (:gamestate renderstate)
-        rostercontainer (get-in renderstate [:teamGUIs team])
+        roster (get-in renderstate [:teamGUIs team])
+        rostercontainer (:container roster)
         teamcharacters (extractteamcharacters gamestate team)
         teamsize (count teamcharacters)]
     (.removeAllChildren rostercontainer)
@@ -404,9 +422,10 @@ targets.  Returns the modified renderstate."
 
 (defn- createcharacterroster [name [x y]]
   (let [rostercontainer (createeaseljscontainer name [x y])
-        background (createjs/Bitmap. (getimageasset "GUIbackground"))]
+        background (createjs/Bitmap. (getimageasset "GUIbackground"))
+        roster {:panels {} :container rostercontainer}]
     (.addChild rostercontainer background)
-    rostercontainer
+    roster
     ))
 
 (defn- createoverlaycontainer []
@@ -426,8 +445,8 @@ targets.  Returns the modified renderstate."
       .removeAllChildren
       (.addChild tilemap)
       (.addChild characters)
-      (.addChild leftRoster)
-      (.addChild rightRoster)
+      (.addChild (:container leftRoster))
+      (.addChild (:container rightRoster))
       (.addChild overlayshape))
     (doto overlayshape
       (aset "x" (get mapoffsetpixels 0))
@@ -436,7 +455,7 @@ targets.  Returns the modified renderstate."
     ;; embed direct references to the map and character containers for
     ;; easy manipulation later
     (swap! displayed-renderstate assoc :stage-map tilemap :stage-characters characters)
-    (swap! displayed-renderstate assoc :teamGUIs {:team1 leftRoster :team2 rightRoster})
+    (swap! displayed-renderstate assoc :teamGUIs {:team1 leftRoster :team2 rightRoster :sprites {}})
     (swap! displayed-renderstate assoc :overlay overlayshape)
     ))
 

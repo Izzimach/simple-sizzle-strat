@@ -9,7 +9,7 @@
 
 
 
-;; the current game state as an atom
+;; the current game state (map, characters) as an atom
 (def current-gamestate (atom {}))
 
 #_(defn newcharacterselected [character]
@@ -23,7 +23,7 @@
     (renderer/redraw))
   )
 
-(defn setupboard []
+(defn initializeboard []
   (let [gamestate (gamestate/makestartingstate)]
     (reset! current-gamestate gamestate)
     (renderer/updategamestate! gamestate)))
@@ -32,7 +32,7 @@
   (set! simplestrat.gameassets/assets loadedassets)
   #_(js/console.log loadedassets)
   (renderer/initializeplayarea)
-  (setupboard))
+  (initializeboard))
 
 
 ;;

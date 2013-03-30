@@ -11,7 +11,8 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [ring/ring-core "1.1.8"]
                  [ring/ring-jetty-adapter "1.1.8"]
-                 [compojure "1.1.5"]]
+                 [compojure "1.1.5"]
+                 [com.cemerick/clojurescript.test "0.0.3"]]
 
   :profiles {:dev {:dependencies [[ring/ring-devel "1.1.8"]]}}
 
@@ -21,8 +22,7 @@
   :source-paths ["src-server"]
   
   :cljsbuild
-  {
-   :builds
+  { :builds
    {
     ;; browser build target
     :main {
@@ -31,21 +31,18 @@
                       :output-to "resources/public/js/simplestrat.js"
                       :optimizations :simple
                       :pretty-print true
-;;                      :libs ["closure/library/third_party/closure"]
-;;                      :externs ["externs/createjs-externs.js"]
+                      ;;                      :libs ["closure/library/third_party/closure"]
+                      ;;                      :externs ["externs/createjs-externs.js"]
                       }
            }
-    ;; node.js server script; not used, currently
-    ;; we use the ring server
-    :nodejs {
-             :source-paths ["src-nodejs"]
-             :compiler {
-                        :output-to "server.js"
-                        :optimizations :simple
-                        :target :nodejs
-                        }
-             }
+    ;; test suite; gets run by phantomjs
+    :tests {
+            :source-paths ["src-browser" "test-cljs"]
+            :compiler {
+                       :output-to "target/cljs/testable.js"
+                       :optimizations :whitespace
+                       :pretty-print true}}
     }
-   }
+   :test-commands {"basic-tests" ["phantomjs.exe" "runners/phantomjs.js" "target/cljs/testable.js"]}}
   )
 
