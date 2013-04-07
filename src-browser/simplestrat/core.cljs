@@ -26,13 +26,14 @@
 (defn initializeboard []
   (let [gamestate (gamestate/makestartingstate)]
     (reset! current-gamestate gamestate)
-    (renderer/updategamestate! gamestate)))
+    ))
 
 (defn startgame [loadedassets]
   (set! simplestrat.gameassets/assets loadedassets)
   #_(js/console.log loadedassets)
+  (initializeboard)
   (renderer/initializeplayarea)
-  (initializeboard))
+  (renderer/updategamestate! @current-gamestate))
 
 
 ;;
@@ -40,7 +41,7 @@
 ;;
 
 (defn createjsstartgame []
-  ;;(repl/connect "http://localhost:9000/repl")
+  (repl/connect "http://localhost:9000/repl")
   (renderer/initializerenderer "target")
   
   ;; the preloader loads all the assets and then calls startgame
