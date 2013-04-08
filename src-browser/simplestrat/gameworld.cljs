@@ -1,4 +1,4 @@
-(ns simplestrat.gamestate
+(ns simplestrat.gameworld
   (:require [clojure.set]))
 
 ;;

@@ -3,7 +3,7 @@
             [clojure.browser.repl :as repl]
             [simplestrat.preloader :as preloader]
             [simplestrat.renderstate :as renderer]
-            [simplestrat.gamestate :as gamestate]
+            [simplestrat.gameworld :as gameworld]
             [simplestrat.gameassets]
             ))
 
@@ -24,8 +24,8 @@
   )
 
 (defn initializeboard []
-  (let [gamestate (gamestate/makestartingstate)]
-    (reset! current-gamestate gamestate)
+  (let [startstate (gameworld/makestartingstate)]
+    (reset! current-gamestate startstate)
     ))
 
 (defn startgame [loadedassets]
@@ -34,9 +34,9 @@
   (initializeboard)
   (renderer/initializeplayarea)
   (renderer/updategamestate! @current-gamestate)
-  (let [characterexamine (gamestate/get-character @current-gamestate 1)
-        moveactions (gamestate/seqof-charactermoveactions characterexamine)
-        movelocations (gamestate/seqof-movelocationsforcharacter @current-gamestate characterexamine nil)
+  (let [characterexamine (gameworld/get-character @current-gamestate 1)
+        moveactions (gameworld/seqof-charactermoveactions characterexamine)
+        movelocations (gameworld/seqof-movelocationsforcharacter @current-gamestate characterexamine nil)
         ]
     (js/console.log (clj->js characterexamine))
     (js/console.log (clj->js moveactions))
