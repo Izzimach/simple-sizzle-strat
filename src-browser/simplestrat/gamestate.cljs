@@ -134,7 +134,7 @@
 
 (defn- moverange [startcoord speed]
   (let [lowcoord (- startcoord speed)
-        highcoord (+ startcoord speed)]
+        highcoord (+ startcoord speed 1)]
     (range lowcoord highcoord)))
 
 (defn seqof-movedestinations [gamestate character moveaction]
@@ -142,19 +142,18 @@
         x (:x character)
         y (:y character)]
     (filter (fn [coords] (istileopen? gamestate coords))
-     (for [destx (moverange x speed)
-           desty (moverange y speed)]
-       [destx desty]))))
+            (for [destx (moverange x speed)
+                  desty (moverange y speed)]
+              [destx desty]))))
 
 (defn seqof-movelocationsforcharacter [gamestate character moveaction]
   (let [moveactions (seqof-charactermoveactions character)]
-    (for [action moveactions
-          :let [ destinations (seqof-movedestinations gamestate character action)]]
-      ;; generate a vector of pairs: [a,b] where a=destination tile,
-      ;; b=action used to move to that tile
-      (map #([% action]) destinations)
-      )))
-
+    (apply concat  ;; thanks stackoverflow!
+     (for [action moveactions
+           :let [ destinations (seqof-movedestinations gamestate character action)]]
+       ;; generate a vector of pairs: [a,b] where a=destination tile,
+       ;; b=action used to move to that tile
+       (map (fn [coords] [action coords]) destinations)))))
 
 ;;
 ;; terrain/map

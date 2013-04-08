@@ -33,7 +33,14 @@
   #_(js/console.log loadedassets)
   (initializeboard)
   (renderer/initializeplayarea)
-  (renderer/updategamestate! @current-gamestate))
+  (renderer/updategamestate! @current-gamestate)
+  (let [characterexamine (gamestate/get-character @current-gamestate 1)
+        moveactions (gamestate/seqof-charactermoveactions characterexamine)
+        movelocations (gamestate/seqof-movelocationsforcharacter @current-gamestate characterexamine nil)
+        ]
+    (js/console.log (clj->js characterexamine))
+    (js/console.log (clj->js moveactions))
+    (js/console.log (clj->js movelocations))))
 
 
 ;;
@@ -41,7 +48,7 @@
 ;;
 
 (defn createjsstartgame []
-  (repl/connect "http://localhost:9000/repl")
+  #_(repl/connect "http://localhost:9000/repl")
   (renderer/initializerenderer "target")
   
   ;; the preloader loads all the assets and then calls startgame
