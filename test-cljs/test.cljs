@@ -99,11 +99,11 @@
     (is (= 1 (count (gw/seqof-charactermajoractions character1)))) "Character 1 has one available major action"
     (is (= 1 (count (gw/seqof-charactermajoractions character2)))) "Character 2 has one available major action"
 
-    (is (= 1 (count (possibletargets gamewithbothcharacters testid1))) "Melee actions target adjacent enemies")
-    (is (= 0 (count (possibletargets gamewithfarcharacters testid1))) "Melee actions can't hit non-adjacent enemies")
+    (is (= 1 (counttargets  gamewithbothcharacters testid1)) "Melee actions target adjacent enemies")
+    (is (= 0 (counttargets  gamewithfarcharacters testid1)) "Melee actions can't hit non-adjacent enemies")
 
-    (is (= 1 (count (possibletargets (gw/advanceturn gamewithbothcharacters) testid2))) "Ranged actions can hit adjacent enemies")
-    (is (= 1 (count (possibletargets (gw/advanceturn gamewithfarcharacters) testid2))) "Ranged actions can hit non-adjacent enemies")
-    (is (= 0 (count (possibletargets (gw/advanceturn gamewithreallyfarcharacters) testid2))) "Ranged actions have a maximum range")
+    (is (= 1 (counttargets  (gw/advanceturn gamewithbothcharacters) testid2)) "Ranged actions can hit adjacent enemies")
+    (is (= 1 (counttargets  (gw/advanceturn gamewithfarcharacters) testid2)) "Ranged actions can hit non-adjacent enemies")
+    (is (= 0 (counttargets  (gw/advanceturn gamewithreallyfarcharacters) testid2)) "Ranged actions have a maximum range")
     ))
 
