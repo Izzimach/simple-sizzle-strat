@@ -1,7 +1,7 @@
 (ns simplestrat.renderstate
   (:use [clojure.set :only (difference)])
   (:require [simplestrat.gameassets :as gameassets]
-            [simplestrat.gamestate :as gamestate]
+            [simplestrat.gameworld :as gameworld]
             [clojure.browser.dom :as dom]))
 
 
@@ -104,10 +104,10 @@
 
 (defn- selectcharacter [character]
   (let [uniqueid (:uniqueid character)
-        defaultaction (gamestate/getdefaultaction character)
+        defaultaction (gameworld/getdefaultaction character)
         renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedcharacteraction defaultaction)
         gamestate (:gamestate renderstate)
-        overlaydata (gamestate/getclickablesfor gamestate character defaultaction)
+        overlaydata (gameworld/getclickablesfor gamestate character defaultaction)
         newrenderstate (rebuildoverlay renderstate overlaydata)]
     (reset! displayed-renderstate newrenderstate)
     (redraw newrenderstate)))
