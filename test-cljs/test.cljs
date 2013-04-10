@@ -48,29 +48,40 @@
     (gw/seqof-movelocationsforcharacter gamestate character nil)))
 
 (deftest existance-and-actions
-  (is (empty? (:characters (gw/makeemptygamestate))) "The initial game state has no characters")
-  (is (not (empty? (:characters gamewithcharacter1))) "Adding a character results in a non-empty character list")
+  (let [countmoves (comp count possiblemoves)
+        countactions (comp count :actionsleft)]
+    (is (empty? (:characters (gw/makeemptygamestate))) "The initial game state has no characters")
+    (is (not (empty? (:characters gamewithcharacter1))) "Adding a character results in a non-empty character list")
 
-  (is (= 2 (count (:actionsleft gamewithcharacter1))) "A game with one character should have two actions: one move action and one standard action")
-  (is (= 0 (count (:actionsleft (gw/advanceturn gamewithcharacter1)))) "Characters don't get actions in their off-turn")
-  
-  (is (= 0 (count (:actionsleft gamewithcharacter2))) "Characters don't get actions in their off-turn")
-  (is (= 2 (count (:actionsleft (gw/advanceturn gamewithcharacter2)))) "Characters get actions in their turn")
+    (is (= 2 (countactions gamewithcharacter1)) "A game with one character should have two actions: one move action and one standard action")
+    (is (= 0 (countactions (gw/advanceturn gamewithcharacter1))) "Characters don't get actions in their off-turn")
+    
+    (is (= 0 (countactions gamewithcharacter2)) "Characters don't get actions in their off-turn")
+    (is (= 2 (countactions (gw/advanceturn gamewithcharacter2))) "Characters get actions in their turn")
 
-  (is (gw/moveactionavailablefor? gamewithcharacter1 testid1) "Characters get a move action every turn")
-  (is (gw/moveactionavailablefor? (gw/advanceturn gamewithcharacter2) testid2) "Characters get a move action every turn")
+    (is (gw/moveactionavailablefor? gamewithcharacter1 testid1) "Characters get a move action every turn")
+    (is (gw/moveactionavailablefor? (gw/advanceturn gamewithcharacter2) testid2) "Characters get a move action every turn")
 
-  (is (not (gw/moveactionavailablefor? gamewithcharacter2 testid2)) "Characters don't get move actions in their off-turn")
+    (is (not (gw/moveactionavailablefor? gamewithcharacter2 testid2)) "Characters don't get move actions in their off-turn"))
   )
 
-(deftest movement-actions
-  (is (= 8 (count (possiblemoves gamewithcharacter1 testid1))) "Characters with move 1 can move to 8 adjacent tiles")
-  (is (= 24 (count (possiblemoves (gw/advanceturn gamewithcharacter2) testid2))) "Characters with move 2 can move to 24 adjacent tiles")
+(deftest move-actions
+  (let [countmoves (comp count possiblemoves)]
+    (is (= 8 (countmoves gamewithcharacter1 testid1)) "Characters with move 1 can move to 8 adjacent tiles")
+    (is (= 24 (countmoves (gw/advanceturn gamewithcharacter2) testid2)) "Characters with move 2 can move to 24 adjacent tiles")
 
-  ;; in the gamestate with both characters-each blocks the movement of
-  ;; their opponent
-  (is (= 7 (count (possiblemoves gamewithbothcharacters testid1))) "Enemies block movement")
-  (is (= 23 (count (possiblemoves (gw/advanceturn gamewithbothcharacters) testid2))) "Enemies block movement")
+    ;; in the gamestate with both characters-each blocks the movement of
+    ;; their opponent
+    (is (= 7  (countmoves gamewithbothcharacters testid1)) "Enemies block movement")
+    (is (= 23 (countmoves (gw/advanceturn gamewithbothcharacters) testid2)) "Enemies block movement")
+
+    ;; test out executing actual movement actions
+    (let [coordsofcharacter (fn [char] [(:x char) (:y char)])
+          whereis (comp coordsofcharacter gw/get-character)]
+      (is (= [3 3] (whereis gamewithcharacter1 testid1 )) "Character should be at original location before move")
+      
+      ))
+  
   )
 
 (defn possibletargets [gamestate characterid]
@@ -79,7 +90,8 @@
 
 (deftest major-actions
   (let [gamewithfarcharacters (gw/move-character gamewithbothcharacters testid2 5 4)
-        gamewithreallyfarcharacters (gw/move-character gamewithbothcharacter testid2 9 9)]
+        gamewithreallyfarcharacters (gw/move-character gamewithbothcharacters testid2 9 9)
+        counttargets (comp count possibletargets)]
     (is (gw/majoractionavailablefor? gamewithcharacter1 testid1) "Characters get a major action every turn")
     (is (gw/majoractionavailablefor? (gw/advanceturn gamewithcharacter2) testid2) "Characters get a major action every turn")
     (is (not (gw/majoractionavailablefor? gamewithcharacter2 testid2)) "Characters don't get major actions in their off-turn")
@@ -94,3 +106,4 @@
     (is (= 1 (count (possibletargets (gw/advanceturn gamewithfarcharacters) testid2))) "Ranged actions can hit non-adjacent enemies")
     (is (= 0 (count (possibletargets (gw/advanceturn gamewithreallyfarcharacters) testid2))) "Ranged actions have a maximum range")
     ))
+
