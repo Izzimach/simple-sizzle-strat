@@ -1,7 +1,8 @@
 (ns simplestrat.test.gameworld
   (:require-macros [cemerick.cljs.test :refer (is deftest with-test run-tests testin)])
   (:require [cemerick.cljs.test :as t]
-            [simplestrat.gameworld :as gw]))
+            [simplestrat.gameworld :as gw]
+            [simplestrat.actions :as action]))
 
 ;; initial game state with and without a character
 (def initialgamestate (gw/makeemptygamestate))
@@ -12,8 +13,8 @@
                  {:charactername "test character"
                   :id testid1 :iconindex 1 :coords [3 3] :team :team1 :starthealth 2
                   :actions [
-                            (gw/createmoveaction "walk" 1 1)
-                            (gw/createmajoraction "punch" 1 1 2)
+                            (action/createmoveaction "walk" 1 1)
+                            (action/createmajoraction "punch" 1 1 2)
                             ]
                   }))
 
@@ -21,8 +22,8 @@
                  {:charactername "second character"
                   :id testid2 :iconindex 2 :coords [4 4] :team :team2 :starthealth 3
                   :actions [
-                            (gw/createmoveaction "run" 2 2)
-                            (gw/createmajoraction "shoot" 2 5 2)
+                            (action/createmoveaction "run" 2 2)
+                            (action/createmajoraction "shoot" 2 5 2)
                             ]
                   }))
 
@@ -45,7 +46,7 @@
 ;; movement spots for a single character
 (defn possiblemoves [gamestate characterid]
   (let [character (gw/get-character gamestate characterid)]
-    (gw/seqof-movelocationsforcharacter gamestate character nil)))
+    (action/seqof-movelocationsforcharacter gamestate character nil)))
 
 (deftest existance-and-actions
   (let [countmoves (comp count possiblemoves)
@@ -65,39 +66,43 @@
     (is (not (gw/moveactionavailablefor? gamewithcharacter2 testid2)) "Characters don't get move actions in their off-turn"))
   )
 
+
 (deftest move-actions
   (let [countmoves (comp count possiblemoves)]
     (is (= 8 (countmoves gamewithcharacter1 testid1)) "Characters with move 1 can move to 8 adjacent tiles")
     (is (= 24 (countmoves (gw/advanceturn gamewithcharacter2) testid2)) "Characters with move 2 can move to 24 adjacent tiles")
-
+    
     ;; in the gamestate with both characters-each blocks the movement of
     ;; their opponent
     (is (= 7  (countmoves gamewithbothcharacters testid1)) "Enemies block movement")
     (is (= 23 (countmoves (gw/advanceturn gamewithbothcharacters) testid2)) "Enemies block movement")
-
+    
     ;; test out executing actual movement actions
     (let [coordsofcharacter (fn [char] [(:x char) (:y char)])
-          whereis (comp coordsofcharacter gw/get-character)]
+          whereis (comp coordsofcharacter gw/get-character)
+          movechar (fn [gamestate charid [dx dy]]
+                     (action/invokedefaultmoveaction gamestate (gw/get-character gamestate charid) [dx dy]))]
       (is (= [3 3] (whereis gamewithcharacter1 testid1 )) "Character should be at original location before move")
-      
-      ))
-  
+      (is (= [4 3] (whereis (movechar gamewithcharacter1 testid1 [4 3]) testid1)) "Character should be new location after move")
+      )
+    )
   )
 
 (defn possibletargets [gamestate characterid]
-  (gw/seqof-attacktargetsforcharacter gamestate (gw/get-character gamestate characterid) nil))
+  (action/seqof-attacktargetsforcharacter gamestate (gw/get-character gamestate characterid) nil))
 
 
 (deftest major-actions
   (let [gamewithfarcharacters (gw/move-character gamewithbothcharacters testid2 5 4)
         gamewithreallyfarcharacters (gw/move-character gamewithbothcharacters testid2 9 9)
         counttargets (comp count possibletargets)]
+    
     (is (gw/majoractionavailablefor? gamewithcharacter1 testid1) "Characters get a major action every turn")
     (is (gw/majoractionavailablefor? (gw/advanceturn gamewithcharacter2) testid2) "Characters get a major action every turn")
     (is (not (gw/majoractionavailablefor? gamewithcharacter2 testid2)) "Characters don't get major actions in their off-turn")
 
-    (is (= 1 (count (gw/seqof-charactermajoractions character1)))) "Character 1 has one available major action"
-    (is (= 1 (count (gw/seqof-charactermajoractions character2)))) "Character 2 has one available major action"
+    (is (= 1 (count (action/seqof-charactermajoractions character1)))) "Character 1 has one available major action"
+    (is (= 1 (count (action/seqof-charactermajoractions character2)))) "Character 2 has one available major action"
 
     (is (= 1 (counttargets  gamewithbothcharacters testid1)) "Melee actions target adjacent enemies")
     (is (= 0 (counttargets  gamewithfarcharacters testid1)) "Melee actions can't hit non-adjacent enemies")
@@ -105,5 +110,12 @@
     (is (= 1 (counttargets  (gw/advanceturn gamewithbothcharacters) testid2)) "Ranged actions can hit adjacent enemies")
     (is (= 1 (counttargets  (gw/advanceturn gamewithfarcharacters) testid2)) "Ranged actions can hit non-adjacent enemies")
     (is (= 0 (counttargets  (gw/advanceturn gamewithreallyfarcharacters) testid2)) "Ranged actions have a maximum range")
+
+    (let [countcharacters (comp count vals :characters)
+          defaultattack (fn [char] (take 1 (action//seqof-charactermajoractions char)))
+          attack (fn [game char target] (action/invokemajoraction game char (defaultattack char) [target]))
+          gethealth (fn [game charid] (:health (gw/get-character game charid)))]
+      (is (= 2 (countcharacters gamewithbothcharacters)) "Two characters enter")
+      (is (= 3 (gethealth gamewithbothcharacters testid2)) "Second character starts with 3 health before the attack"))
     ))
 

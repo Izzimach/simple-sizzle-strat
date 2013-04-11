@@ -104,6 +104,17 @@
      :actions actions
      }))
 
+(defn damage-character [gamestate characterid damageamount damagetype]
+  (let [character (get-character gamestate characterid)
+        newhealth (max 0 (- (:health character) damageamount))
+        damagedcharacter (assoc character :health newhealth)]
+    ;; if this defeats the character, remove them from the world
+    (if (= 0 newhealth)
+      (remove-character gamestate characterid)
+      (put-character gamestate damagedcharacter))
+    )
+  )
+
 (defn- allies? [character1 character2]
   (= (:team character1) (:team character2)))
 
@@ -111,80 +122,6 @@
   (not (allies? character1 character2)))
 
 
-;;
-;; character actions
-;;
-
-(defn createmajoraction [name icon range damage]
-  {:action :major :name name :range range :damage damage :iconindex icon})
-
-(defn createmoveaction [name icon movespeed]
-  {:action :move :name name :speed movespeed :iconindex icon})
-
-(defn- ismoveaction? [action]
-  (= :move (:action action)))
-
-(defn- ismajoraction? [action]
-  (= :major (:action action)))
-
-(defn seqof-charactermoveactions [character]
-  (filter ismoveaction? (:actions character)))
-
-(defn seqof-charactermajoractions [character]
-  (filter ismajoraction? (:actions character)))
-
-(defn- moverange [startcoord speed]
-  (let [lowcoord (- startcoord speed)
-        highcoord (+ startcoord speed 1)]
-    (range lowcoord highcoord)))
-
-(defn seqof-movedestinations [gamestate character moveaction]
-  (let [speed (:speed moveaction)
-        x (:x character)
-        y (:y character)]
-    (filter (fn [coords] (istileopen? gamestate coords))
-            (for [destx (moverange x speed)
-                  desty (moverange y speed)]
-              [destx desty]))))
-
-(defn- characterrange [character1 character2]
-  (let [x1 (:x character1)
-        y1 (:y character1)
-        x2 (:x character2)
-        y2 (:y character2)
-        dx (- x1 x2)
-        dy (- y1 y2)
-        sqr #(* % %)]
-    (Math/sqrt (+ (sqr dx) (sqr dy)))
-    ))
-
-(defn seqof-targets [gamestate character majoraction]
-  ;; all enemies are valid targets
-  (let [enemies (filter #(enemies? % character) (vals (:characters gamestate)))
-        ;; add 0.5 to make sure adjacent diagonals are range 1
-        attackrange (+ 0.5 (:range majoraction))
-        checkrange (fn [target] (< (characterrange character target) attackrange))]
-    (filter #(checkrange %) enemies)
-    ))
-
-(defn seqof-movelocationsforcharacter [gamestate character selectedmoveaction]
-  ;; TODO: if selectedmoveaction is non-nil, use results from only
-  ;; that action
-  (apply concat  ;; thanks stackoverflow!
-         (for [moveaction (seqof-charactermoveactions character)
-               :let [ destinations (seqof-movedestinations gamestate character moveaction)]]
-           ;; generate a vector of pairs: [a,b] where a=destination tile,
-           ;; b=action used to move to that tile
-           (map (fn [coords] [moveaction coords]) destinations))))
-
-(defn seqof-attacktargetsforcharacter [gamestate character selectedmajoraction]
-  ;; TODO: if selectedmajoraction is non-nil, use results from only
-  ;; that action
-  (apply concat
-         (for [majoraction (seqof-charactermajoractions character)
-               :let [targets (seqof-targets gamestate character majoraction)]]
-           ;; in the end we want a list of [action target] pairs
-           (map (fn [target] [majoraction target]) targets))))
 
 ;;
 ;; terrain/map
@@ -199,30 +136,3 @@
   (for [x (range 0 width)
         y (range 0 height)]
     {:x x :y y :terrain (chooseterrain x y)}))
-
-;;
-;; initialization
-;;
-
-(defn makestartingcharacters []
-  [
-   (create-character
-    {:charactername "bob" :id 1 :iconindex 128 :coords [5 2] :team :team2 :starthealth 2 :actions [(createmoveaction "walk" 1 1)]})
-   (create-character
-    {:charactername "tom" :id 2 :iconindex 130 :coords [6 5] :team :team1 :starthealth 2 :actions [(createmoveaction "walk" 1 1)]})
-   (create-character
-    {:charactername "shemp" :id 3 :iconindex 191 :coords [8 5] :team :team1 :starthealth 2 :actions [(createmoveaction "run" 26 2)]})
-   ])
-
-(defn addstartingcharacters [gamestate]
-  (let [characters (makestartingcharacters)]
-    (reduce put-character gamestate characters)))
-
-(defn makestartingstate []
-  (let [gamemap (makestartingmap {:width 10 :height 10})
-        emptygamestate (makeemptygamestate)]
-    (-> emptygamestate
-        (assoc :map gamemap)
-        (addstartingcharacters)
-        (advanceturn) ; so team1 basically starts first
-        )))

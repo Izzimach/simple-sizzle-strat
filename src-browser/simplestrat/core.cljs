@@ -23,6 +23,7 @@
     (renderer/redraw))
   )
 
+
 (defn initializeboard []
   (let [startstate (gameworld/makestartingstate)]
     (reset! current-gamestate startstate)
@@ -46,6 +47,29 @@
 ;;
 ;; initialization
 ;;
+
+(defn makestartingcharacters []
+  [
+   (world/create-character
+    {:charactername "bob" :id 1 :iconindex 128 :coords [5 2] :team :team2 :starthealth 2 :actions [(createmoveaction "walk" 1 1)]})
+   (world/create-character
+    {:charactername "tom" :id 2 :iconindex 130 :coords [6 5] :team :team1 :starthealth 2 :actions [(createmoveaction "walk" 1 1)]})
+   (world/create-character
+    {:charactername "shemp" :id 3 :iconindex 191 :coords [8 5] :team :team1 :starthealth 2 :actions [(createmoveaction "run" 26 2)]})
+   ])
+
+(defn addstartingcharacters [gamestate]
+  (let [characters (makestartingcharacters)]
+    (reduce world/put-character gamestate characters)))
+
+(defn makestartingstate []
+  (let [gamemap (makestartingmap {:width 10 :height 10})
+        emptygamestate (world/makeemptygamestate)]
+    (-> emptygamestate
+        (assoc :map gamemap)
+        (addstartingcharacters)
+        (world/advanceturn) ; so team1 basically starts first
+        )))
 
 (defn createjsstartgame []
   #_(repl/connect "http://localhost:9000/repl")
