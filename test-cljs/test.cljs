@@ -132,7 +132,7 @@
       (is (= 2 (-> gamewithbothcharacters (gw/get-character testid2) defaultattack :damage))
            "Player 2's default attack does two damage")
 
-            (is (= 3 (gethealth gamewithbothcharacters testid2)) "Second character starts with 3 health before the attack")
+            (is (= 3 (gethealth gamewithbothcharacters testid2)) "Character 2 starts with 3 health before the attack")
       (is (= 2 (-> gamewithbothcharacters
                    (attack testid1 testid2)
                    (gethealth testid2))) "Character 1 attacks character 2, reducing character 2's health from 3 to 2")
