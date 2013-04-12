@@ -1,4 +1,4 @@
-(ns simplestrat.actions
+(ns simplestrat.action
   (:require [simplestrat.gameworld :as world]))
 
 ;;
@@ -77,18 +77,20 @@
            (map (fn [target] [majoraction target]) targets))))
 
 (defn invokemoveaction [gamestate character moveaction [destx desty]]
-  ;; for now the moveaction is ignored, we just move the relevant
-  ;; character
-  (world/move-character gamestate (:uniqueid character) destx desty)
+  (let [moverange (:speed moveaction)]
+    ;; for now the moveaction is ignored, we just move the relevant
+    ;; character
+    (world/move-character gamestate (:uniqueid character) destx desty))
   )
 
 (defn invokedefaultmoveaction [gamestate character [destx desty]]
-  (let [moveaction (take 1 (seqof-charactermoveactions character))]
+  (let [moveaction (first (seqof-charactermoveactions character))]
     (invokemoveaction gamestate character moveaction [destx desty])))
 
 (defn invokemajoraction [gamestate character majoraction targets]
   ;; just apply damage to the target
-  (let [damage (:damage majoraction)]
-    (world/damage-character gamestate (:uniqueid character) damage nil)
+  (let [damage (:damage majoraction)
+        damagetarget (fn [curstate curtarget] (world/damage-character curstate (:uniqueid curtarget) damage nil))]
+    (reduce damagetarget gamestate targets)    
     )
   )

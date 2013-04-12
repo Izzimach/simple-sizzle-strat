@@ -2,19 +2,18 @@
   (:require-macros [cemerick.cljs.test :refer (is deftest with-test run-tests testin)])
   (:require [cemerick.cljs.test :as t]
             [simplestrat.gameworld :as gw]
-            [simplestrat.actions :as action]))
+            [simplestrat.action :as action]))
 
 ;; initial game state with and without a character
 (def initialgamestate (gw/makeemptygamestate))
 (def testid1 1)
 (def testid2 2)
-
 (def character1 (gw/create-character
                  {:charactername "test character"
                   :id testid1 :iconindex 1 :coords [3 3] :team :team1 :starthealth 2
                   :actions [
                             (action/createmoveaction "walk" 1 1)
-                            (action/createmajoraction "punch" 1 1 2)
+                            (action/createmajoraction "punch" 1 1 1)
                             ]
                   }))
 
@@ -83,7 +82,7 @@
           movechar (fn [gamestate charid [dx dy]]
                      (action/invokedefaultmoveaction gamestate (gw/get-character gamestate charid) [dx dy]))]
       (is (= [3 3] (whereis gamewithcharacter1 testid1 )) "Character should be at original location before move")
-      (is (= [4 3] (whereis (movechar gamewithcharacter1 testid1 [4 3]) testid1)) "Character should be new location after move")
+      (is (= [4 3] (whereis (movechar gamewithcharacter1 testid1 [4 3]) testid1)) "Character should be at the new location after move")
       )
     )
   )
@@ -110,12 +109,36 @@
     (is (= 1 (counttargets  (gw/advanceturn gamewithbothcharacters) testid2)) "Ranged actions can hit adjacent enemies")
     (is (= 1 (counttargets  (gw/advanceturn gamewithfarcharacters) testid2)) "Ranged actions can hit non-adjacent enemies")
     (is (= 0 (counttargets  (gw/advanceturn gamewithreallyfarcharacters) testid2)) "Ranged actions have a maximum range")
-
+    
+    (is (= 1 (-> gamewithcharacter1
+                 (gw/damage-character testid1 1 :untyped)
+                 (gw/get-character testid1)
+                 :health)) "After taking one point of damage character 1 should have one health point left")
+    (is (= nil (-> gamewithcharacter1
+                 (gw/damage-character testid1 2 :untyped)
+                 (gw/get-character testid1))) 
+        "After taking two points of damage character 1 is defeated and removed from the game.")
+    
     (let [countcharacters (comp count vals :characters)
-          defaultattack (fn [char] (take 1 (action//seqof-charactermajoractions char)))
-          attack (fn [game char target] (action/invokemajoraction game char (defaultattack char) [target]))
+          defaultattack (fn [char] (first (action/seqof-charactermajoractions char)))
+          attack (fn [game charid targetid]
+                   (let [char (gw/get-character game charid)
+                         target (gw/get-character game targetid)]
+                     (action/invokemajoraction game char (defaultattack char) [target])))
           gethealth (fn [game charid] (:health (gw/get-character game charid)))]
       (is (= 2 (countcharacters gamewithbothcharacters)) "Two characters enter")
-      (is (= 3 (gethealth gamewithbothcharacters testid2)) "Second character starts with 3 health before the attack"))
+      (is (= 1 (-> gamewithbothcharacters (gw/get-character testid1) defaultattack :damage))
+           "Player 1's default attack does one damage")
+      (is (= 2 (-> gamewithbothcharacters (gw/get-character testid2) defaultattack :damage))
+           "Player 2's default attack does two damage")
+
+            (is (= 3 (gethealth gamewithbothcharacters testid2)) "Second character starts with 3 health before the attack")
+      (is (= 2 (-> gamewithbothcharacters
+                   (attack testid1 testid2)
+                   (gethealth testid2))) "Character 1 attacks character 2, reducing character 2's health from 3 to 2")
+      (is (= 1 (-> gamewithbothcharacters
+                   (attack testid2 testid1)
+                   countcharacters)) "Character 2 attacks player one, defeating it, so only one character remains"))
+    
     ))
 

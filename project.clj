@@ -4,17 +4,19 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :repl-options { :port 9000 }
+  :repl-options { :port 9000 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :plugins [[lein-cljsbuild "0.3.0"]
             [lein-ring "0.8.2"]]
+  
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [ring/ring-core "1.1.8"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  [compojure "1.1.5"]
                  [com.cemerick/clojurescript.test "0.0.3"]]
 
-  :profiles {:dev {:dependencies [[ring/ring-devel "1.1.8"]]}}
+  :profiles {:dev {:dependencies [[ring/ring-devel "1.1.8"]
+                                  [com.cemerick/piggieback "0.0.4"]]}}
 
   :ring { :handler simplestrat.httpserver/app :port 5000}
   

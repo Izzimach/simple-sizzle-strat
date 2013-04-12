@@ -1,5 +1,6 @@
 (ns simplestrat.gameworld
-  (:require [clojure.set]))
+  (:require [clojure.set]
+            [simplestrat.utils :as utils]))
 
 ;;
 ;; basic game state
@@ -77,7 +78,7 @@
     (put-character gamestate movedcharacter)))
 
 (defn remove-character [gamestate characterid]
-  (clojure.contrib.core/dissoc-in gamestate [:characters characterid]))
+  (utils/dissoc-in gamestate [:characters characterid]))
 
 (defn- istileopen? [gamestate [x y]]
   ;; blocked if a character is there
