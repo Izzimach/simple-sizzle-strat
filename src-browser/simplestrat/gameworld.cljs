@@ -85,7 +85,13 @@
   (let [characters (vals (:characters gamestate))
         ischaracterat? (fn [char] (and (= x (:x char)) (= y (:y char))))]
     ;;(js/console.log movex y (clj->js characters))
-    (not-any? ischaracterat? characters)))
+    (and
+      (not-any? ischaracterat? characters) ;; no characters blocking the tile
+      (> x -1)
+      (< x (-> gamestate :map :width))
+      (> y -1)
+      (< y (-> gamestate :map :height))
+      )))
 
 
 ;;
@@ -134,6 +140,9 @@
     54))
 
 (defn makestartingmap [{:keys [width height]}]
-  (for [x (range 0 width)
-        y (range 0 height)]
-    {:x x :y y :terrain (chooseterrain x y)}))
+  (let [tilecontents   (for [x (range 0 width)
+                             y (range 0 height)]
+                         {:x x :y y :terrain (chooseterrain x y)})
+        ]
+    {:tiledata tilecontents :width width :height height})
+  )

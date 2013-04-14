@@ -2,6 +2,7 @@
   (:use [clojure.set :only (difference)])
   (:require [simplestrat.gameassets :as gameassets]
             [simplestrat.gameworld :as gameworld]
+            [simplestrat.action :as action]
             [clojure.browser.dom :as dom]))
 
 
@@ -44,6 +45,7 @@
   (if (contains? @spritecache spritesheetname)
     ;; spritesheet is already in the cache, just return it
     (get @spritecache spritesheetname)
+    ;; no spritesheet with this name yet, create it and add to the cache
     (let [spritesheetimage (getimageasset spritesheetname)
           spritesheet-config (clj->js {:images [spritesheetimage] :frames {:width 12 :height 12}})
           spritesheet (createjs/SpriteSheet. spritesheet-config)]
@@ -87,8 +89,9 @@
          findspriteforcharacter
          rebuildoverlay)
 
-(defn- highlightcharacter [character]
+(defn- highlightcharacter
   "Highlights current character. Doesn't modify the clojure-side renderstate"
+  [character]
   (let [renderstate @displayed-renderstate]
     (doto renderstate
       (highlightcharacteronmap character)
@@ -102,14 +105,29 @@
       (unhighlightcharacterinroster character)
       (redraw))))
 
+(defn getclickablesfor
+  [gamestate character selectedaction]
+  (let [majoraction (if (action/ismajoraction? selectedaction)
+                      selectedaction 
+                      (action/getdefaultmajoraction character))
+        moveaction (if (action/ismoveaction? selectedaction)
+                     selectedaction
+                     (action/getdefaultmoveaction character))
+        attacktargets (action/seqof-attacktargetsforcharacter gamestate character majoraction)
+        movedestinations (action/seqof-movelocationsforcharacter gamestate character moveaction)]
+    {:moves movedestinations :attacks attacktargets})
+  )
+
 (defn- selectcharacter [character]
   (let [uniqueid (:uniqueid character)
-        defaultaction (gameworld/getdefaultaction character)
-        renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedcharacteraction defaultaction)
+        defaultmajoraction (action/getdefaultmajoraction character)
+        defaultmoveaction (action/getdefaultmoveaction character)
+        renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedaction defaultmajoraction)
         gamestate (:gamestate renderstate)
-        overlaydata (gameworld/getclickablesfor gamestate character defaultaction)
+        overlaydata (getclickablesfor gamestate character defaultmajoraction)
         newrenderstate (rebuildoverlay renderstate overlaydata)]
     (reset! displayed-renderstate newrenderstate)
+    #_(swap! displayed-renderstate #(rebuildoverlay % overlaydata))
     (redraw newrenderstate)))
 
 (defn- selectcharacteraction [character active-action]
@@ -121,6 +139,7 @@
 ;;
 ;;
 ;; current sprite lists [:mapsprites :team1 :team2]
+;;
 
 (defn- displaycharactermapsprite [renderstate character]
   (let [sprites (get-in renderstate [:sprites :mapsprites])
@@ -153,14 +172,6 @@
   ;; just dissoc and let the GC collect it, I guess
   (dissoc sprites (:uniqueid character)))
 
-(defn- generatemissingsprites [sprites missingcharacters]
-  "Looks for characters that do not have a sprite associated with them, creates any missing sprites,
-and returns an updated sprite map which should have all the needed sprites."
-  (reduce addcharactersprite sprites (seq missingcharacters)))
-
-(defn- removeunusedsprites [spritemap unusedspriteids]
-  (reduce removecharactersprite spritemap (seq unusedspriteids)))
-
 (defn- syncspritemaptocharacters [spritemap characterseq]
   "Adds sprites for charaters that do not yet have them, and removes any sprites that do not have a character using them. Returns the updated spritemap."
   (let [characteruniqueids (set (map :uniqueid characterseq))
@@ -173,8 +184,8 @@ and returns an updated sprite map which should have all the needed sprites."
     ;;(js/console.log (clj->js unusedspriteids))
     ;;(js/console.log (clj->js (rest characterseq)))
     (-> spritemap
-        (generatemissingsprites characterseq)
-        (removeunusedsprites unusedspriteids))))
+        ((partial reduce addcharactersprite) (seq characterseq))
+        ((partial reduce removecharactersprite) (seq unusedspriteids)))))
 
 (defn- syncsprites [renderstate spritemapkeyword characterseq]
   "Updates the sprites used for the given spritemap. Returns the possibly-updated renderstate."
@@ -208,7 +219,7 @@ and returns an updated sprite map which should have all the needed sprites."
     (if ((comp not identical?) gamemap oldgamemap) ; map changed
       (do
         (.removeAllChildren gameboardcontainer)
-        (doseq [tile gamemap
+        (doseq [tile (:tiledata gamemap)
                 :let [{:keys [x y terrain]} tile
                       freshtile (createjs/BitmapAnimation. spritesheet)
                       tilex (* x tilespacing)
@@ -322,9 +333,9 @@ and returns an updated sprite map which should have all the needed sprites."
   [(* tilex tilespacing) (* tiley tilespacing)])
 
 (defn- renderoverlaycharms [locationseq renderfunc]
-  (doseq [loc locationseq
-          :let [[x y] loc
-                [px py] (tilexy->pixelsxy [x y])]]
+  (doseq [actionloc-pair locationseq
+          :let [[action loc] actionloc-pair
+                [px py] (tilexy->pixelsxy loc)]]
     (renderfunc px py)))
 
 (defn- renderselectedcharacterbits [overlay selectedcharacter]
@@ -359,9 +370,10 @@ and returns an updated sprite map which should have all the needed sprites."
 (defn- overlayclicked [event]
   (js/console.log "overlay clicked"))
 
-(defn rebuildoverlay [renderstate clickables]
+(defn rebuildoverlay
   "Render the overlay which shows the current selected character and possible move/attack
-targets.  Returns the modified renderstate."
+  targets.  Returns the modified renderstate."
+  [renderstate clickables]
   (let [gamestate (:gamestate renderstate)
         movelocations (:moves clickables)
         attacklocations (:attacks clickables)

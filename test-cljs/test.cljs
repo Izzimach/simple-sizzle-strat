@@ -99,13 +99,13 @@
     (is (gw/majoractionavailablefor? gamewithcharacter1 testid1) "Characters get a major action every turn")
     (is (gw/majoractionavailablefor? (gw/advanceturn gamewithcharacter2) testid2) "Characters get a major action every turn")
     (is (not (gw/majoractionavailablefor? gamewithcharacter2 testid2)) "Characters don't get major actions in their off-turn")
-
+    
     (is (= 1 (count (action/seqof-charactermajoractions character1)))) "Character 1 has one available major action"
     (is (= 1 (count (action/seqof-charactermajoractions character2)))) "Character 2 has one available major action"
-
+    
     (is (= 1 (counttargets  gamewithbothcharacters testid1)) "Melee actions target adjacent enemies")
     (is (= 0 (counttargets  gamewithfarcharacters testid1)) "Melee actions can't hit non-adjacent enemies")
-
+    
     (is (= 1 (counttargets  (gw/advanceturn gamewithbothcharacters) testid2)) "Ranged actions can hit adjacent enemies")
     (is (= 1 (counttargets  (gw/advanceturn gamewithfarcharacters) testid2)) "Ranged actions can hit non-adjacent enemies")
     (is (= 0 (counttargets  (gw/advanceturn gamewithreallyfarcharacters) testid2)) "Ranged actions have a maximum range")
@@ -115,8 +115,8 @@
                  (gw/get-character testid1)
                  :health)) "After taking one point of damage character 1 should have one health point left")
     (is (= nil (-> gamewithcharacter1
-                 (gw/damage-character testid1 2 :untyped)
-                 (gw/get-character testid1))) 
+                   (gw/damage-character testid1 2 :untyped)
+                   (gw/get-character testid1))) 
         "After taking two points of damage character 1 is defeated and removed from the game.")
     
     (let [countcharacters (comp count vals :characters)
@@ -128,17 +128,17 @@
           gethealth (fn [game charid] (:health (gw/get-character game charid)))]
       (is (= 2 (countcharacters gamewithbothcharacters)) "Two characters enter")
       (is (= 1 (-> gamewithbothcharacters (gw/get-character testid1) defaultattack :damage))
-           "Player 1's default attack does one damage")
+          "Player 1's default attack does one damage")
       (is (= 2 (-> gamewithbothcharacters (gw/get-character testid2) defaultattack :damage))
-           "Player 2's default attack does two damage")
-
-            (is (= 3 (gethealth gamewithbothcharacters testid2)) "Character 2 starts with 3 health before the attack")
+          "Player 2's default attack does two damage")
+      
+      (is (= 3 (gethealth gamewithbothcharacters testid2)) "Character 2 starts with 3 health before the attack")
       (is (= 2 (-> gamewithbothcharacters
                    (attack testid1 testid2)
                    (gethealth testid2))) "Character 1 attacks character 2, reducing character 2's health from 3 to 2")
       (is (= 1 (-> gamewithbothcharacters
                    (attack testid2 testid1)
                    countcharacters)) "Character 2 attacks player one, defeating it, so only one character remains"))
-    
     ))
+
 

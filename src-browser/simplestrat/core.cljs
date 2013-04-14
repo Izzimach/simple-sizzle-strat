@@ -73,7 +73,7 @@
 ;;
 
 (defn createjsstartgame []
-  (repl/connect "http://localhost:9000/repl")
+  #_(repl/connect "http://localhost:9000/repl")
   (renderer/initializerenderer "target")
   
   ;; the preloader loads all the assets and then calls startgame
