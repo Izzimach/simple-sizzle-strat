@@ -353,19 +353,23 @@
      movelocations
      (fn [x y]
        (doto graphics
-         (.beginStroke "#F00" 0.5)
-         (.beginStroke "#F00" 0.5)
+         (.beginStroke "#0EE" 0.5)
+         (.beginFill "#0FF" 0.5)
          (.drawCircle x y 7))))))
 
-(defn- renderattacklocations [overlay attacklocations]
-  (let [graphics (.-graphics overlay)]
-    (renderoverlaycharms
-     attacklocations
-     (fn [x y]
-       (doto graphics
-         (.beginStroke "#0FF" 0.5)
-         (.beginFill "#0FF" 0.5)
-         (.drawCircle x y 4))))))
+(defn- renderattacktargets [overlay attacktargets]
+  (let [graphics (.-graphics overlay)
+        renderfunc (fn [x y]
+                     (doto graphics
+                       (.beginStroke "#F00" 0.6)
+                       (.beginFill "#A00" 0.6)
+                       (.drawCircle x y 6)))
+        ]
+    (doseq [actiontarget-pair attacktargets
+            :let [[action target] actiontarget-pair
+                  [px py ] (tilexy->pixelsxy [(:x target) (:y target)])]
+            ]
+      (renderfunc px py))))
 
 (defn- overlayclicked [event]
   (js/console.log "overlay clicked"))
@@ -376,7 +380,7 @@
   [renderstate clickables]
   (let [gamestate (:gamestate renderstate)
         movelocations (:moves clickables)
-        attacklocations (:attacks clickables)
+        attacktargets (:attacks clickables)
         overlay (:overlay renderstate)
         selectedcharacterid (:selectedcharacterid renderstate)
         selectedcharacter (get-in gamestate [:characters selectedcharacterid])]
@@ -386,8 +390,8 @@
       (renderselectedcharacterbits overlay selectedcharacter))
     (when (not-nil? movelocations)
       (rendermovelocations overlay movelocations))
-    (when (not-nil? attacklocations)
-      (renderattacklocations overlay attacklocations)))
+    (when (not-nil? attacktargets)
+      (renderattacktargets overlay attacktargets)))
   renderstate)
 
 ;;

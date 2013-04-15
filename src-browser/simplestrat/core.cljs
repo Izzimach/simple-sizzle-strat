@@ -28,11 +28,14 @@
 (defn makestartingcharacters []
   [
    (world/create-character
-    {:charactername "bob" :id 1 :iconindex 128 :coords [5 2] :team :team2 :starthealth 2 :actions [(action/createmoveaction "walk" 1 1)]})
+    {:charactername "bob" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
+     :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "punch" 1 1 1)]})
    (world/create-character
-    {:charactername "tom" :id 2 :iconindex 130 :coords [6 5] :team :team1 :starthealth 2 :actions [(action/createmoveaction "walk" 1 1)]})
+    {:charactername "tom" :id 2 :iconindex 130 :coords [8 3] :team :team1 :starthealth 2 
+     :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "throw" 1 2 1)]})
    (world/create-character
-    {:charactername "shemp" :id 3 :iconindex 191 :coords [8 5] :team :team1 :starthealth 2 :actions [(action/createmoveaction "run" 26 2)]})
+    {:charactername "shemp" :id 3 :iconindex 191 :coords [8 5] :team :team1 :starthealth 2 
+     :actions [(action/createmoveaction "run" 26 2) (action/createmajoraction "shoot" 1 3 1)]})
    ])
 
 (defn addstartingcharacters [gamestate]
@@ -73,7 +76,7 @@
 ;;
 
 (defn createjsstartgame []
-  #_(repl/connect "http://localhost:9000/repl")
+  (repl/connect "http://localhost:9000/repl")
   (renderer/initializerenderer "target")
   
   ;; the preloader loads all the assets and then calls startgame
