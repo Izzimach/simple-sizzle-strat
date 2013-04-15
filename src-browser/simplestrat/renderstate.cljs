@@ -366,8 +366,8 @@
                        (.drawCircle x y 6)))
         ]
     (doseq [actiontarget-pair attacktargets
-            :let [[action target] actiontarget-pair
-                  [px py ] (tilexy->pixelsxy [(:x target) (:y target)])]
+            :let [[action {x :x y :y}] actiontarget-pair
+                  [px py] (tilexy->pixelsxy [x y])]
             ]
       (renderfunc px py))))
 
