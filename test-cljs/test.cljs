@@ -5,7 +5,9 @@
             [simplestrat.action :as action]))
 
 ;; initial game state with and without a character
-(def initialgamestate (gw/makeemptygamestate))
+(def initialgamestate 
+  (-> (gw/makeemptygamestate)
+      (assoc :map (gw/makestartingmap {:width 10 :height 10}))))
 (def testid1 1)
 (def testid2 2)
 (def character1 (gw/create-character
@@ -42,14 +44,9 @@
       (gw/put-character character2)
       (gw/advanceturn)))
 
-;; movement spots for a single character
-(defn possiblemoves [gamestate characterid]
-  (let [character (gw/get-character gamestate characterid)]
-    (action/seqof-movelocationsforcharacter gamestate character nil)))
 
 (deftest existance-and-actions
-  (let [countmoves (comp count possiblemoves)
-        countactions (comp count :actionsleft)]
+  (let [countactions (comp count :actionsleft)]
     (is (empty? (:characters (gw/makeemptygamestate))) "The initial game state has no characters")
     (is (not (empty? (:characters gamewithcharacter1))) "Adding a character results in a non-empty character list")
 
@@ -65,6 +62,11 @@
     (is (not (gw/moveactionavailablefor? gamewithcharacter2 testid2)) "Characters don't get move actions in their off-turn"))
   )
 
+
+;; movement spots for a single character
+(defn possiblemoves [gamestate characterid]
+  (let [character (gw/get-character gamestate characterid)]
+    (action/seqof-movelocationsforcharacter gamestate character nil)))
 
 (deftest move-actions
   (let [countmoves (comp count possiblemoves)]
