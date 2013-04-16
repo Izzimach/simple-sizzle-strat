@@ -379,7 +379,7 @@
                        (.drawCircle x y 6)))
         ]
     (doseq [actiontarget-pair attacktargets
-            :let [[action {x :x y :y}] actiontarget-pair
+            :let [[action {:keys [x y]}] actiontarget-pair
                   [px py] (tilexy->pixelsxy [x y])]
             ]
       (renderfunc px py))))
@@ -418,8 +418,10 @@
         character (world/get-character gamestate characterid)
         addmovecallback (fn [callbacks [action location]] 
                           (assoc callbacks location #(movecallback gamestate character action location)))
-        addattackcallback (fn [callbacks [action target]] 
-                            (assoc callbacks location #(attackcallback gamestate character action location)))
+        addattackcallback (fn [callbacks [action target]]
+                            (let [{:keys [x y]} target
+                                  location [x y]]
+                              (assoc callbacks location #(attackcallback gamestate character action target))))
         ]
     ;; each callback is a function with parameters [gamestate character action targetx targety]
     ;; convert move data into clickcallbacks

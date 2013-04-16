@@ -91,7 +91,7 @@
            (for [majoraction majoractions
                  :let [targets (seqof-targets gamestate character majoraction)]]
              ;; in the end we want a list of [action target] pairs
-             (map #(majoraction %) targets)))))
+             (map #(vec [majoraction %]) targets)))))
 
 (defn getdefaultmajoraction [character]
   (first (seqof-charactermajoractions character)))
