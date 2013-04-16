@@ -1,7 +1,7 @@
 (ns simplestrat.renderstate
   (:use [clojure.set :only (difference)])
   (:require [simplestrat.gameassets :as gameassets]
-            [simplestrat.gameworld :as gameworld]
+            [simplestrat.gameworld :as world]
             [simplestrat.action :as action]
             [clojure.browser.dom :as dom]))
 
@@ -131,6 +131,14 @@
     (redraw newrenderstate)))
 
 (defn- selectcharacteraction [character active-action]
+  (let [uniqueid (:uniqueid character)
+        renderstate (assoc @displayed-renderstate :selectedcharacterid uniqueid :selectedaction active-action)
+        gamestate (:gamestate renderstate)
+        overlaydata (getclickablesfor gamestate character active-action)
+        newrenderstate (rebuildoverlay renderstate overlaydata)
+        ]
+    (reset! displayed-renderstate newrenderstate)
+    (redraw newrenderstate))
   )
 
 ;;
@@ -216,7 +224,7 @@
         oldgamemap (get-in oldrenderstate [:gamestate :map])
         gameboardcontainer (:stage-map renderstate)
         spritesheet (getspritesheet! "icons")]
-    (if ((comp not identical?) gamemap oldgamemap) ; map changed
+    (if ((comp not identical?) gamemap oldgamemap) ;; map changed
       (do
         (.removeAllChildren gameboardcontainer)
         (doseq [tile (:tiledata gamemap)
@@ -332,6 +340,10 @@
 (defn- tilexy->pixelsxy [[tilex tiley]]
   [(* tilex tilespacing) (* tiley tilespacing)])
 
+(defn- pixelsxy->tilexy [[pixelx pixely]]
+  (let [scaledown #(js/Math.round (/ % tilespacing))]
+    [(scaledown pixelx) (scaledown pixely)]))
+
 (defn- renderoverlaycharms [locationseq renderfunc]
   (doseq [actionloc-pair locationseq
           :let [[action loc] actionloc-pair
@@ -355,7 +367,8 @@
        (doto graphics
          (.beginStroke "#0EE" 0.5)
          (.beginFill "#0FF" 0.5)
-         (.drawCircle x y 7))))))
+         (.drawCircle x y 7))))
+    ))
 
 (defn- renderattacktargets [overlay attacktargets]
   (let [graphics (.-graphics overlay)
@@ -372,18 +385,58 @@
       (renderfunc px py))))
 
 (defn- overlayclicked [event]
-  (js/console.log "overlay clicked"))
+  (let [renderstate @displayed-renderstate
+        overlay (:overlay renderstate)
+        gamestate (:gamestate renderstate)
+        clickpx (- (.-stageX event) (.-x overlay))
+        clickpy (- (.-stageY event) (.-y overlay))
+        [tilex tiley] (pixelsxy->tilexy [clickpx clickpy])
+        ;; keys in clickables are of the form [x y]
+        clickcallbacks (:overlayclickables renderstate) 
+        clickedon (clickcallbacks [tilex tiley])
+        ]
+    (js/console.log "overlay clicked")
+    (js/console.log event)
+    ;; lookup the clicked tile to see if there is a clickable there
+    (js/console.log (clj->js [tilex tiley]))
+    (js/console.log clickedon)
+    
+    ))
+
+(defn- movecallback
+  [gamestate character action [targetx targety]]
+  nil)
+
+(defn- attackcallback
+  [gamestate character action [targetx targety]]
+  nil)
+
+(defn- buildclickcallbacks
+  [renderstate actiondata]
+  (let [{:keys [moves attacks]} actiondata
+        {:keys [gamestate characterid]} renderstate
+        character (world/get-character gamestate characterid)
+        addmovecallback (fn [callbacks [action location]] 
+                          (assoc callbacks location #(movecallback gamestate character action location)))
+        addattackcallback (fn [callbacks [action target]] 
+                            (assoc callbacks location #(attackcallback gamestate character action location)))
+        ]
+    ;; each callback is a function with parameters [gamestate character action targetx targety]
+    ;; convert move data into clickcallbacks
+    (merge
+      (reduce addmovecallback {} moves)
+      (reduce addattackcallback {} attacks))))
 
 (defn rebuildoverlay
   "Render the overlay which shows the current selected character and possible move/attack
   targets.  Returns the modified renderstate."
-  [renderstate clickables]
+  [renderstate actiondata]
   (let [gamestate (:gamestate renderstate)
-        movelocations (:moves clickables)
-        attacktargets (:attacks clickables)
         overlay (:overlay renderstate)
         selectedcharacterid (:selectedcharacterid renderstate)
-        selectedcharacter (get-in gamestate [:characters selectedcharacterid])]
+        movelocations (:moves actiondata)
+        attacktargets (:attacks actiondata)
+        selectedcharacter (world/get-character gamestate selectedcharacterid)]
     ;;(js/console.log (clj->js selectedcharacter))
     (-> overlay .-graphics .clear)
     (when (not-nil? selectedcharacter)
@@ -391,8 +444,8 @@
     (when (not-nil? movelocations)
       (rendermovelocations overlay movelocations))
     (when (not-nil? attacktargets)
-      (renderattacktargets overlay attacktargets)))
-  renderstate)
+      (renderattacktargets overlay attacktargets))
+    (assoc renderstate :overlayclickables (buildclickcallbacks renderstate actiondata))))
 
 ;;
 ;;

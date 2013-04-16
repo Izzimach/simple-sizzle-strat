@@ -62,13 +62,12 @@
   contains the [x y] coordinates to move to. The third argument is an
   move action to use to produce the possible move locations. If no third argument is
   passed in, this function returns locations for all move actions this character has."
-  [gamestate character & [selectedmoveaction]]
+  [gamestate character & [selectedmoveactions]]
   ;; TODO: if selectedmoveaction is non-nil, use results from only
   ;; that action
-  (let [moveactions (if (nil? selectedmoveaction) 
+  (let [moveactions (if (nil? selectedmoveactions) 
                       (seqof-charactermoveactions character)
-                      [selectedmoveaction]
-                      )]
+                      [selectedmoveactions])]
     (apply concat  ;; thanks stackoverflow!
            (for [moveaction moveactions
                  :let [destinations (seqof-movedestinations gamestate character moveaction)]]
@@ -92,7 +91,7 @@
            (for [majoraction majoractions
                  :let [targets (seqof-targets gamestate character majoraction)]]
              ;; in the end we want a list of [action target] pairs
-             (map (fn [target] [majoraction target]) targets)))))
+             (map #(majoraction %) targets)))))
 
 (defn getdefaultmajoraction [character]
   (first (seqof-charactermajoractions character)))
