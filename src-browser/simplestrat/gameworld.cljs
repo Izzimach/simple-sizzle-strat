@@ -93,6 +93,12 @@
       (< y (-> gamestate :map :height))
       )))
 
+(defn logmessage [gamestate message]
+  (let [{:keys [loglist loglistmaxsize]} gamestate]
+    ;; maintain some finite amount of log messages
+    (if (not (nil? loglist))
+      (assoc gamestate :loglist (conj loglist message))
+      gamestate)))
 
 ;;
 ;; character management

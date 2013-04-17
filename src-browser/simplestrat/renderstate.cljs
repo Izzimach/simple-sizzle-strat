@@ -17,6 +17,13 @@
 
 (def ^:private not-nil? (comp not nil?))
 
+;; submitplayeraction is set by an external caller (usually core). When you want to modifiy
+;; the global game state, create a function to modify the game state and "send" it to
+;; submitplayeraction
+(def *submitplayeraction*)
+(defn setactionhook! [submitfunc]
+  (set! *submitplayeraction* submitfunc))
+
 ;;
 ;;
 ;; current renderstate, contains various rendering objects. These are
@@ -400,16 +407,16 @@
     ;; lookup the clicked tile to see if there is a clickable there
     (js/console.log (clj->js [tilex tiley]))
     (js/console.log clickedon)
-    
+    (clickedon)
     ))
 
 (defn- movecallback
   [gamestate character action [targetx targety]]
-  nil)
+  (*submitplayeraction* #(action/invokemoveaction gamestate character action [targetx targety])))
 
 (defn- attackcallback
-  [gamestate character action [targetx targety]]
-  nil)
+  [gamestate character action target]
+  (*submitplayeraction* #(action/invokemajoraction gamestate character action [target])))
 
 (defn- buildclickcallbacks
   [renderstate actiondata]

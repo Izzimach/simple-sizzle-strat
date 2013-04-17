@@ -104,14 +104,20 @@
   (let [moverange (:speed moveaction)]
     ;; for now the moveaction is ignored, we just move the relevant
     ;; character
-    (world/move-character gamestate (:uniqueid character) destx desty))
+    (-> gamestate
+      (world/logmessage "Bob moved.")
+      (world/move-character (:uniqueid character) destx desty)
+      ))
   )
 
 (defn invokemajoraction [gamestate character majoraction targets]
   ;; just apply damage to the target
   (let [damage (:damage majoraction)
-        damagetarget (fn [curstate curtarget] (world/damage-character curstate (:uniqueid curtarget) damage nil))]
-    (reduce damagetarget gamestate targets)    
+        damagetarget (fn [curstate target] (world/damage-character curstate (:uniqueid target) damage nil))
+        damagetargets (fn [curstate targets] (reduce damagetarget curstate targets))]
+      (-> gamestate
+          (world/logmessage "Bob attacked.")
+          (damagetargets targets))
     )
   )
 
@@ -120,4 +126,3 @@
 
 (defn invokedefaultmajoraction [gamestate character targets]
   (invokemajoraction gamestate character (getdefaultmajoraction character) targets))
-    

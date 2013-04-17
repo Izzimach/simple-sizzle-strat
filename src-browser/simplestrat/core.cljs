@@ -56,11 +56,18 @@
     (reset! current-gamestate startstate)
     ))
 
+(defn changegamestate [changefunc]
+  (js/console.log "Changegamestate called")
+  (swap! current-gamestate changefunc)
+  (renderer/updategamestate! @current-gamestate))
+
+
 (defn startgame [loadedassets]
   (set! simplestrat.gameassets/assets loadedassets)
   #_(js/console.log loadedassets)
   (initializeboard)
   (renderer/initializeplayarea)
+  (renderer/setactionhook! changegamestate)
   (renderer/updategamestate! @current-gamestate)
   (let [characterexamine (world/get-character @current-gamestate 1)
         moveactions (action/seqof-charactermoveactions characterexamine)
