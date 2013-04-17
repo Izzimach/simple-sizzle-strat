@@ -407,11 +407,12 @@
     ;; lookup the clicked tile to see if there is a clickable there
     (js/console.log (clj->js [tilex tiley]))
     (js/console.log clickedon)
-    (clickedon)
+    (if clickedon (clickedon))
     ))
 
 (defn- movecallback
   [gamestate character action [targetx targety]]
+  (js/console.log (clj->js [character action]))
   (*submitplayeraction* #(action/invokemoveaction gamestate character action [targetx targety])))
 
 (defn- attackcallback
@@ -421,8 +422,8 @@
 (defn- buildclickcallbacks
   [renderstate actiondata]
   (let [{:keys [moves attacks]} actiondata
-        {:keys [gamestate characterid]} renderstate
-        character (world/get-character gamestate characterid)
+        {:keys [gamestate selectedcharacterid selectedaction]} renderstate
+        character (world/get-character gamestate selectedcharacterid)
         addmovecallback (fn [callbacks [action location]] 
                           (assoc callbacks location #(movecallback gamestate character action location)))
         addattackcallback (fn [callbacks [action target]]
