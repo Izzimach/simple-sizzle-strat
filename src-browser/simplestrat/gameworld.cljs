@@ -1,6 +1,7 @@
 (ns simplestrat.gameworld
   (:require [clojure.set]
-            [simplestrat.utils :as utils]))
+            [simplestrat.utils :as utils]
+            [clojure.string :as string]))
 
 ;;
 ;; basic game state
@@ -18,7 +19,9 @@
    ;; actions and standard actions
    :actionsleft #{}
    ;; index of the current turn, used for effects with a duration
-   :turn 0})
+   :turn 0
+   :loglist (list)})
+
 
 ;;
 ;; turns
@@ -27,7 +30,8 @@
 (defn- nextturnteamfrom [currentturnteam]
   (if (= :team1 currentturnteam) :team2 :team1))
 
-(defn- charactersforteam [gamestate team]
+(defn- charactersforteam
+  "Generates a sequence of all the characters that belong on a specified team." [gamestate team]
   (filter #(= team (:team %)) (vals (:characters gamestate))))
 
 (defn- actionsforcharacter [character]
@@ -45,7 +49,8 @@
     (reduce #(clojure.set/union %1 (actionsforcharacter %2)) #{} characters))
   )
 
-(defn advanceturn "Advances the game world to the next turn, allocating move and major actions for the newly-active team"
+(defn advanceturn
+  "Advances the game world to the next turn, allocating move and major actions for the newly-active team"
   [gamestate]
   (let [nextteam (nextturnteamfrom (:activeteam gamestate))
         nextactions (actionsforteam gamestate nextteam)
@@ -93,7 +98,22 @@
       (< y (-> gamestate :map :height))
       )))
 
-(defn logmessage [gamestate message]
+;;
+;; message/event log
+;;
+
+(defn disablemessagelog
+  "Messages won't get generated/stored for this gamestate" [gamestate]
+  (dissoc gamestate :loglist))
+
+(defn enablemessagelog
+  "Messages will get generated/stored for this gamestate" [gamestate]
+  ;; start with an empty list
+  (assoc gamestate :loglist (list)))
+
+(defn logmessage
+  "Store a text message into the message log. The message log is displayed to the player."
+  [gamestate message]
   (let [{:keys [loglist loglistmaxsize]} gamestate]
     ;; maintain some finite amount of log messages
     (if (not (nil? loglist))
@@ -120,11 +140,17 @@
 (defn damage-character [gamestate characterid damageamount damagetype]
   (let [character (get-character gamestate characterid)
         newhealth (max 0 (- (:health character) damageamount))
-        damagedcharacter (assoc character :health newhealth)]
+        damagedcharacter (assoc character :health newhealth)
+        damagelogtext (string/join [(:name character) " takes " damageamount " damage."])]
     ;; if this defeats the character, remove them from the world
     (if (= 0 newhealth)
-      (remove-character gamestate characterid)
-      (put-character gamestate damagedcharacter))
+      (-> gamestate
+          (logmessage damagelogtext)
+          (logmessage (string/join [(:name character) " is defeated!"]))
+          (remove-character characterid))
+      (-> gamestate
+          (logmessage damagelogtext)
+          (put-character damagedcharacter)))
     )
   )
 

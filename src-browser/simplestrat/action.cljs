@@ -1,5 +1,6 @@
 (ns simplestrat.action
-  (:require [simplestrat.gameworld :as world]))
+  (:require [simplestrat.gameworld :as world]
+            [clojure.string :as string]))
 
 ;;
 ;; character actions
@@ -105,7 +106,7 @@
     ;; for now the moveaction is ignored, we just move the relevant
     ;; character
     (-> gamestate
-      (world/logmessage "Bob moved.")
+      (world/logmessage (string/join [(:name character) " moved."]))
       (world/move-character (:uniqueid character) destx desty)
       ))
   )
@@ -113,11 +114,13 @@
 (defn invokemajoraction [gamestate character majoraction targets]
   ;; just apply damage to the target
   (let [damage (:damage majoraction)
-        damagetarget (fn [curstate target] (world/damage-character curstate (:uniqueid target) damage nil))
+        damagetarget (fn [curstate target]
+                       (-> curstate 
+                           (world/logmessage (string/join [(:name character) " attacks " (:name target)]))
+                           (world/damage-character (:uniqueid target) damage nil)))
         damagetargets (fn [curstate targets] (reduce damagetarget curstate targets))]
-      (-> gamestate
-          (world/logmessage "Bob attacked.")
-          (damagetargets targets))
+    (-> gamestate
+        (damagetargets targets))
     )
   )
 

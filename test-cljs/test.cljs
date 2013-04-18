@@ -7,7 +7,10 @@
 ;; initial game state with and without a character
 (def initialgamestate 
   (-> (gw/makeemptygamestate)
-      (assoc :map (gw/makestartingmap {:width 10 :height 10}))))
+      (assoc :map (gw/makestartingmap {:width 10 :height 10}))
+      (gw/disablemessagelog) ;; no log for testing purposes
+      ))
+ 
 (def testid1 1)
 (def testid2 2)
 (def character1 (gw/create-character

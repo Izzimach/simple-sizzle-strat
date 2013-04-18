@@ -1,5 +1,6 @@
 (ns simplestrat.renderstate
-  (:use [clojure.set :only (difference)])
+  (:use [clojure.set :only (difference)]
+        [clojure.string :only (join)])
   (:require [simplestrat.gameassets :as gameassets]
             [simplestrat.gameworld :as world]
             [simplestrat.action :as action]
@@ -458,12 +459,30 @@
     (assoc renderstate :overlayclickables (buildclickcallbacks renderstate actiondata))))
 
 ;;
+;; text log window
+;;
+
+(defn createmessagelog [[x y]]
+  (let [logdisplay (createjs/Text. "argh")]
+    (doto logdisplay
+      (aset "x" x)
+      (aset "y" y)
+      (aset "text" "")
+      )
+    logdisplay
+    ))
+  
+(defn updatemessagelog [renderstate]
+  (let [{:keys [gamestate messagelog]} renderstate
+        first10messages (take 10 (:loglist gamestate))]
+    (aset messagelog "text" (clojure.string/join "\n" (reverse first10messages)))
+    renderstate))
+
+;;
 ;;
 ;; update to reflect new gamestate
 ;;
 
-
-;;
 
 (defn updategamestate! [gamestate]
   (let [oldrenderstate @displayed-renderstate
@@ -473,7 +492,8 @@
             (rebuildcharacterdisplaylist)
             (rebuildteamdisplaylist :team1)
             (rebuildteamdisplaylist :team2)
-            (rebuildoverlay nil))]
+            (rebuildoverlay nil)
+            (updatemessagelog))]
     (if
         (compare-and-set! displayed-renderstate oldrenderstate newrenderstate)
       nil ; updated renderstate
@@ -507,26 +527,22 @@
     roster
     ))
 
-(defn- createoverlaycontainer []
-  (let [characteroutline (createjs/Shape.)
-        movelocations (createjs/Shape.)
-        attacklocations (createjs/Shape.)]
-    ))
-
 (defn initializeplayarea []
   (let [stage (:stage @displayed-renderstate)
         tilemap (createeaseljscontainer "tilemap" mapoffsetpixels)
         characters (createeaseljscontainer "characters" mapoffsetpixels)
         leftRoster (createcharacterroster "team1Roster" [50 100])
         rightRoster (createcharacterroster "team2Roster" [500 100])
-        overlayshape (createjs/Shape.)]
+        overlayshape (createjs/Shape.)
+        messagelog (createmessagelog [100 0])]
     (doto stage
       .removeAllChildren
       (.addChild tilemap)
       (.addChild characters)
       (.addChild (:container leftRoster))
       (.addChild (:container rightRoster))
-      (.addChild overlayshape))
+      (.addChild overlayshape)
+      (.addChild messagelog))
     (doto overlayshape
       (aset "x" (get mapoffsetpixels 0))
       (aset "y" (get mapoffsetpixels 1))
@@ -535,7 +551,7 @@
     ;; easy manipulation later
     (swap! displayed-renderstate assoc :stage-map tilemap :stage-characters characters)
     (swap! displayed-renderstate assoc :teamGUIs {:team1 leftRoster :team2 rightRoster :sprites {}})
-    (swap! displayed-renderstate assoc :overlay overlayshape)
+    (swap! displayed-renderstate assoc :overlay overlayshape :messagelog messagelog)
     ))
 
 (defn initializerenderer [canvasname]
