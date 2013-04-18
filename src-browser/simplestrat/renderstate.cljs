@@ -280,8 +280,9 @@
 ;;
 ;;
 ;; draw characters displayed on left/right roster lists
+;; and info tiles
 ;;
-;;
+
 (defn- createcharacterinfopanel [renderstate character]
   (let [sprite-path [:teamGUIs :sprites]
         panel (createjs/Container.)
@@ -291,8 +292,7 @@
         ]
     (doto charactersprite
       (aset "x" 0)
-      (aset "y" 0)
-      )
+      (aset "y" 0))
     (doto panel
       (.addChild charactersprite))
     (assoc-in renderstate sprite-path newspritemap))
@@ -300,6 +300,10 @@
 
 (defn- removecharacterinfopanel [renderstate character]
   )
+
+(defn syncpanelstoteamcharacters
+  [rostercontainer characterpanels teamcharacters]
+  (let [missingpanels]))
 
 (defn- highlightcharacterinroster [renderstate character]
   (let [charactersprite (findspriteforcharacter renderstate (:team character) character)]
@@ -329,6 +333,7 @@
   (let [gamestate (:gamestate renderstate)
         roster (get-in renderstate [:teamGUIs team])
         rostercontainer (:container roster)
+        characterpanels (:panels roster)
         teamcharacters (extractteamcharacters gamestate team)
         teamsize (count teamcharacters)]
     (.removeAllChildren rostercontainer)
