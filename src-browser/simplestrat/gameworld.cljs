@@ -15,7 +15,7 @@
    :characters {}
    ;; which team is active; either :team1 or :team2
    :activeteam :team2
-   ;; a set of actions left for the active team. includes both move
+   ;; a set of actions available to the active team. includes both move
    ;; actions and standard actions
    :actionsleft #{}
    ;; index of the current turn, used for effects with a duration
@@ -34,11 +34,11 @@
   "Generates a sequence of all the characters that belong on a specified team." [gamestate team]
   (filter #(= team (:team %)) (vals (:characters gamestate))))
 
-(defn- actionsforcharacter [character]
+(defn- actiontypesavailableforcharacter [character]
   (let [uniqueid (:uniqueid character)]
     #{ [:moveaction uniqueid] [:majoraction uniqueid] }))
 
-(defn- actionsforteam
+(defn- actiontypesavailableforteam
   "Produces a set of all the allowed actions for the specified team, by
   basically gathering up all the actions available to each member of
   the team."
@@ -46,14 +46,14 @@
   (let [characters (charactersforteam gamestate team)]
     ;;(js/console.log (clj->js team))
     ;;(js/console.log (clj->js characters))
-    (reduce #(clojure.set/union %1 (actionsforcharacter %2)) #{} characters))
+    (reduce #(clojure.set/union %1 (actiontypesavailableforcharacter %2)) #{} characters))
   )
 
 (defn advanceturn
-  "Advances the game world to the next turn, allocating move and major actions for the newly-active team"
+  "Advances the game world to the next turn, generating available move and major actions for the newly-active team."
   [gamestate]
   (let [nextteam (nextturnteamfrom (:activeteam gamestate))
-        nextactions (actionsforteam gamestate nextteam)
+        nextactions (actiontypesavailableforteam gamestate nextteam)
         nextturn (inc (:turn gamestate))]
     ;;(js/console.log (clj->js actions))
     (assoc gamestate :activeteam nextteam :actionsleft nextactions :turn nextturn)))
@@ -70,6 +70,15 @@
   (let [majoraction [:majoraction characterid]
         availableactions (:actionsleft gamestate)]
     (not (nil? (get availableactions majoraction)))))
+
+(defn consumeaction
+  "Remove the specified action from the list of available actions, to indicate that the
+  character has already performed this action."
+  [gamestate characterid action]
+  (let [availableactions (:actionsleft gamestate)
+        actiontype (:actiontype action)
+        postconsumeactions (disj availableactions [actiontype characterid])]
+    (assoc gamestate :actionsleft postconsumeactions)))
 
 (defn get-character [gamestate characterid]
   (get-in gamestate [:characters characterid]))

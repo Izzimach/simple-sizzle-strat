@@ -121,8 +121,13 @@
         moveaction (if (action/ismoveaction? selectedaction)
                      selectedaction
                      (action/getdefaultmoveaction character))
-        attacktargets (action/seqof-attacktargetsforcharacter gamestate character majoraction)
-        movedestinations (action/seqof-movelocationsforcharacter gamestate character moveaction)]
+        characterid (:uniqueid character)
+        attacktargets (if (world/majoractionavailablefor? gamestate characterid)
+                        (action/seqof-attacktargetsforcharacter gamestate character majoraction)
+                        [])
+        movedestinations (if (world/moveactionavailablefor? gamestate characterid)
+                           (action/seqof-movelocationsforcharacter gamestate character moveaction)
+                           [])]
     {:moves movedestinations :attacks attacktargets})
   )
 

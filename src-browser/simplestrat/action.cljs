@@ -7,16 +7,16 @@
 ;;
 
 (defn createmajoraction [name icon range damage]
-  {:action :major :name name :range range :damage damage :iconindex icon})
+  {:actiontype :majoraction :name name :range range :damage damage :iconindex icon})
 
 (defn createmoveaction [name icon movespeed]
-  {:action :move :name name :speed movespeed :iconindex icon})
+  {:actiontype :moveaction :name name :speed movespeed :iconindex icon})
 
 (defn- ismoveaction? [action]
-  (= :move (:action action)))
+  (= :moveaction (:actiontype action)))
 
 (defn- ismajoraction? [action]
-  (= :major (:action action)))
+  (= :majoraction (:actiontype action)))
 
 (defn seqof-charactermoveactions [character]
   (filter ismoveaction? (:actions character)))
@@ -102,25 +102,29 @@
 
 
 (defn invokemoveaction [gamestate character moveaction [destx desty]]
-  (let [moverange (:speed moveaction)]
+  (let [moverange (:speed moveaction)
+        characterid (:uniqueid character)]
     ;; for now the moveaction is ignored, we just move the relevant
     ;; character
     (-> gamestate
       (world/logmessage (string/join [(:name character) " moved."]))
-      (world/move-character (:uniqueid character) destx desty)
+      (world/move-character characterid destx desty)
+      (world/consumeaction characterid moveaction)
       ))
   )
 
 (defn invokemajoraction [gamestate character majoraction targets]
   ;; just apply damage to the target
   (let [damage (:damage majoraction)
+        characterid (:uniqueid character)
         damagetarget (fn [curstate target]
                        (-> curstate 
                            (world/logmessage (string/join [(:name character) " attacks " (:name target)]))
                            (world/damage-character (:uniqueid target) damage nil)))
         damagetargets (fn [curstate targets] (reduce damagetarget curstate targets))]
     (-> gamestate
-        (damagetargets targets))
+        (damagetargets targets)
+        (world/consumeaction characterid majoraction))
     )
   )
 
