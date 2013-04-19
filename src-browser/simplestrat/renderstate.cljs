@@ -18,6 +18,18 @@
 
 (def ^:private not-nil? (comp not nil?))
 
+
+(defn- createeaseljscontainer [name [x y]]
+  (let [freshcontainer (createjs/Container.)]
+    (doto freshcontainer
+      (aset "id" name)
+      (aset "name" name)
+      (aset "x" x)
+      (aset "y" y)
+      (aset "mouseEnabled" true))
+    ;;(aset "onClick" (fn [_] (js/console.log "clicked")))
+    freshcontainer))
+
 ;; submitplayeraction is set by an external caller (usually core). When you want to modifiy
 ;; the global game state, create a function to modify the game state and "send" it to
 ;; submitplayeraction
@@ -283,27 +295,93 @@
 ;; and info tiles
 ;;
 
-(defn- createcharacterinfopanel [renderstate character]
-  (let [sprite-path [:teamGUIs :sprites]
+(defn- createcharacterroster [name team [x y]]
+  (let [rostercontainer (createeaseljscontainer name [x y])
+        ;;background (createjs/Bitmap. (getimageasset "GUIbackground"))
+        roster {:panels {} :team team :container rostercontainer}]
+    ;;(.addChild rostercontainer background)
+    roster
+    ))
+
+
+(defn- createcharacterinfopanel [renderstate character orderindex]
+  (let [rostercontainer (get-in renderstate [:teamGUIs (:team character) :container])
+        sprite-path [:sprites (:team character)]
         panel (createjs/Container.)
+        healthtext (createjs/Text. "Health: 0")
+        actionsavailabletext (createjs/Text. "Actions Available: ")
         oldspritemap (get-in renderstate sprite-path)
         newspritemap (addcharactersprite oldspritemap character)
-        charactersprite (get newspritemap (:uniqueid character))
-        ]
+        charactersprite (get newspritemap (:uniqueid character))]
     (doto charactersprite
       (aset "x" 0)
-      (aset "y" 0))
+      (aset "y" 0)
+      (aset "name" "sprite"))
+    (doto healthtext
+      (aset "x" 30)
+      (aset "y" 10)
+      (aset "name" "healthtext"))
+    (doto actionsavailabletext
+      (aset "x" 30)
+      (aset "y" 30)
+      (aset "name" "actiontext"))
     (doto panel
-      (.addChild charactersprite))
-    (assoc-in renderstate sprite-path newspritemap))
-  )
+      (.addChild charactersprite)
+      (.addChild healthtext)
+      (.addChild actionsavailabletext)
+      (aset "y" (* orderindex 45)))
+    (.addChild rostercontainer panel)
+    (-> renderstate
+        (assoc-in sprite-path newspritemap)
+        (assoc-in [:teamGUIs (:team character) :panels (:uniqueid character)] panel))))
 
 (defn- removecharacterinfopanel [renderstate character]
+  (let [panelpath [:teamGUIs (:team character) :panels (:uniqueid character)]
+        panel (get-in renderstate panelpath)
+        rostercontainer (get-in renderstate [:teamGUIs (:team character) :container])]
+    (.removeChild rostercontainer panel)
+    (utils/dissoc-in renderstate panelpath)
+  ))
+
+(defn- getactionwords [renderstate character]
+  (let [gamestate (:gamestate renderstate)
+        characterid (:uniqueid character)
+        ;; if the function returns true, conj's actiontext onto actionwords
+        checkforaction (fn [actionwords actioncheckfunc actiontext] (if (actioncheckfunc gamestate characterid) (conj actionwords actiontext) actionwords))]
+    (-> ["Actions: "]
+        (checkforaction world/majoractionavailablefor? "Major")
+        (checkforaction world/moveactionavailablefor? "Move")
+        )))
+
+(defn- updatepaneldata [renderstate character orderindex]
+  (let [panelpath [:teamGUIs (:team character) :panels (:uniqueid character)]
+        panel (get-in renderstate panelpath)
+        healthtext (.getChildByName panel "healthtext")
+        actiontext (.getChildByName panel "actiontext")
+        actionwords (getactionwords renderstate character)]
+    (aset healthtext "text" (string/join "Health:" (:health character)))
+    (aset actiontext "text" (apply string/join actionwords))
+    )
+  )
+
+(defn- updatecharacterinfopanel [renderstate [orderindex character]]
+  (let [roster (get-in renderstate [:teamGUIs (:team character)])
+        {:keys [container panels]} roster
+        characterid (:uniqueid character)]
+    ;; update the panels if it exists; if it doesn't create a new panel
+    (if 
+      (contains? panels characterid)
+      (updatepaneldata renderstate character orderindex)
+      (createcharacterinfopanel renderstate character orderindex)
+      )
+    )
   )
 
 (defn syncpanelstoteamcharacters
-  [rostercontainer characterpanels teamcharacters]
-  (let [missingpanels]))
+  [renderstate rostercontainer characterpanels teamcharacters]
+  (let [panelset (set (keys characterpanels))]
+    (reduce updatecharacterinfopanel renderstate (map-indexed (fn [ix ch] [ix ch]) teamcharacters))
+    ))
 
 (defn- highlightcharacterinroster [renderstate character]
   (let [charactersprite (findspriteforcharacter renderstate (:team character) character)]
@@ -320,8 +398,6 @@
     (scalesprite charactersprite rostertilescale)
     (.addChild rostercontainer charactersprite)))
 
-(defn- displaycharacterinfopanel [renderstate character])
-
 (defn- extractteamcharacters [gamestate team]
   (let [allcharacters (vals (:characters gamestate))
         teamcharacters (filter #(= (:team %1) team) allcharacters)
@@ -336,18 +412,20 @@
         characterpanels (:panels roster)
         teamcharacters (extractteamcharacters gamestate team)
         teamsize (count teamcharacters)]
-    (.removeAllChildren rostercontainer)
+    ;;(.removeAllChildren rostercontainer)
     ;;(js/console.log team)
     ;;(js/console.log teamcharacters)
     ;;(syncsprites! team teamcharacters)
-    (let [newrenderstate (syncsprites renderstate team teamcharacters)
+    (syncpanelstoteamcharacters renderstate rostercontainer characterpanels teamcharacters)
+    #_(let [newrenderstate (syncsprites renderstate team teamcharacters)
           teamspritemap (get-in newrenderstate [:sprites team])]
       (doseq [characterindex (range teamsize)
               :let [character (get teamcharacters characterindex)
                     x 0
                     y (* 2 tilespacing characterindex)]]
         (displaycharacterrostersprite rostercontainer teamspritemap character x y))
-      newrenderstate)))
+      newrenderstate)
+    ))
 
 ;;
 ;;
@@ -518,31 +596,12 @@
 ;;
 ;;
 
-(defn- createeaseljscontainer [name [x y]]
-  (let [freshcontainer (createjs/Container.)]
-    (doto freshcontainer
-      (aset "id" name)
-      (aset "name" name)
-      (aset "x" x)
-      (aset "y" y)
-      (aset "mouseEnabled" true))
-    ;;(aset "onClick" (fn [_] (js/console.log "clicked")))
-    freshcontainer))
-
-(defn- createcharacterroster [name [x y]]
-  (let [rostercontainer (createeaseljscontainer name [x y])
-        background (createjs/Bitmap. (getimageasset "GUIbackground"))
-        roster {:panels {} :container rostercontainer}]
-    (.addChild rostercontainer background)
-    roster
-    ))
-
 (defn initializeplayarea []
   (let [stage (:stage @displayed-renderstate)
         tilemap (createeaseljscontainer "tilemap" mapoffsetpixels)
         characters (createeaseljscontainer "characters" mapoffsetpixels)
-        leftRoster (createcharacterroster "team1Roster" [50 100])
-        rightRoster (createcharacterroster "team2Roster" [500 100])
+        leftRoster (createcharacterroster "team1Roster" :team1 [50 100])
+        rightRoster (createcharacterroster "team2Roster" :team2 [500 100])
         overlayshape (createjs/Shape.)
         messagelog (createmessagelog [100 0])]
     (doto stage
