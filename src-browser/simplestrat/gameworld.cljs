@@ -3,6 +3,8 @@
             [simplestrat.utils :as utils]
             [clojure.string :as string]))
 
+
+(declare logmessage)
 ;;
 ;; basic game state
 ;;
@@ -30,6 +32,11 @@
 (defn- nextturnteamfrom [currentturnteam]
   (if (= :team1 currentturnteam) :team2 :team1))
 
+(defn- stringfromteam [team]
+  (if (= :team1 team)
+    "team 1"
+    "team 2"))
+
 (defn- charactersforteam
   "Generates a sequence of all the characters that belong on a specified team." [gamestate team]
   (filter #(= team (:team %)) (vals (:characters gamestate))))
@@ -56,7 +63,9 @@
         nextactions (actiontypesavailableforteam gamestate nextteam)
         nextturn (inc (:turn gamestate))]
     ;;(js/console.log (clj->js actions))
-    (assoc gamestate :activeteam nextteam :actionsleft nextactions :turn nextturn)))
+    (-> gamestate
+      (assoc :activeteam nextteam :actionsleft nextactions :turn nextturn)
+      (logmessage (clojure.string/join ["Turn for " (stringfromteam nextteam) " begins."])))))
 
 (defn moveactionavailablefor? [gamestate characterid]
   (let [moveaction [:moveaction characterid]

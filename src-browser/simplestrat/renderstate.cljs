@@ -1,10 +1,10 @@
 (ns simplestrat.renderstate
-  (:use [clojure.set :only (difference)]
-        [clojure.string :only (join)])
+  (:use [clojure.set :only (difference)])
   (:require [simplestrat.gameassets :as gameassets]
             [simplestrat.gameworld :as world]
             [simplestrat.action :as action]
-            [clojure.browser.dom :as dom]))
+            [clojure.browser.dom :as dom]
+            [clojure.string :as string]))
 
 
 (def ^:const ^:private spritescale 2)
@@ -13,8 +13,6 @@
 (def ^:const ^:private tilespacing standardtilesize)
 (def ^:const ^:private rostertilescale 1.8) ; relative to standardtilesize
 (def ^:const ^:private rostertilesize (* rostertilescale standardtilesize))
-
-(def ^:const ^:private mapoffsetpixels [200 100])
 
 (def ^:private not-nil? (comp not nil?))
 
@@ -319,13 +317,14 @@
       (aset "name" "sprite"))
     (doto healthtext
       (aset "x" 30)
-      (aset "y" 10)
+      (aset "y" -12)
       (aset "name" "healthtext"))
     (doto actionsavailabletext
       (aset "x" 30)
-      (aset "y" 30)
+      (aset "y" 8)
       (aset "name" "actiontext"))
     (doto panel
+      (aset "name" (:uniqueid character))
       (.addChild charactersprite)
       (.addChild healthtext)
       (.addChild actionsavailabletext)
@@ -349,7 +348,7 @@
         ;; if the function returns true, conj's actiontext onto actionwords
         checkforaction (fn [actionwords actioncheckfunc actiontext] (if (actioncheckfunc gamestate characterid) (conj actionwords actiontext) actionwords))]
     (-> ["Actions: "]
-        (checkforaction world/majoractionavailablefor? "Major")
+        (checkforaction world/majoractionavailablefor? "Attack")
         (checkforaction world/moveactionavailablefor? "Move")
         )))
 
@@ -359,8 +358,9 @@
         healthtext (.getChildByName panel "healthtext")
         actiontext (.getChildByName panel "actiontext")
         actionwords (getactionwords renderstate character)]
-    (aset healthtext "text" (string/join "Health:" (:health character)))
-    (aset actiontext "text" (apply string/join actionwords))
+    (aset healthtext "text" (string/join " " ["Health:" (:health character)]))
+    (aset actiontext "text" (string/join " " actionwords))
+    renderstate
     )
   )
 
@@ -369,13 +369,31 @@
         {:keys [container panels]} roster
         characterid (:uniqueid character)]
     ;; update the panels if it exists; if it doesn't create a new panel
-    (if 
-      (contains? panels characterid)
+    (if (contains? panels characterid)
       (updatepaneldata renderstate character orderindex)
-      (createcharacterinfopanel renderstate character orderindex)
+      (-> renderstate
+          (createcharacterinfopanel character orderindex)
+          (updatepaneldata character orderindex))
       )
     )
   )
+
+(defn- removedeadcharacterpanels [renderstate characters team]
+  ;; walk over all children in the container and remove any that don't
+  ;; have a corresponding character
+  (let [roster (get-in renderstate [:teamGUIs team])
+        {:keys [container panels]} roster
+        numchildren (.getNumChildren container)]
+    ;;(js/console.log (clj->js characters))
+    (doseq [childindex (range numchildren)
+            :let [childcontainer (.getChildAt container childindex)
+                  childid (.-name childcontainer)]]
+      ;;(js/console.log childcontainer)
+      ;;(js/console.log childid)
+      (when (not-any? #(= childid (:uniqueid %)) characters)
+        ;;(js/console.log "removing")
+        (.removeChild container childcontainer)))
+    renderstate))
 
 (defn syncpanelstoteamcharacters
   [renderstate rostercontainer characterpanels teamcharacters]
@@ -416,16 +434,9 @@
     ;;(js/console.log team)
     ;;(js/console.log teamcharacters)
     ;;(syncsprites! team teamcharacters)
-    (syncpanelstoteamcharacters renderstate rostercontainer characterpanels teamcharacters)
-    #_(let [newrenderstate (syncsprites renderstate team teamcharacters)
-          teamspritemap (get-in newrenderstate [:sprites team])]
-      (doseq [characterindex (range teamsize)
-              :let [character (get teamcharacters characterindex)
-                    x 0
-                    y (* 2 tilespacing characterindex)]]
-        (displaycharacterrostersprite rostercontainer teamspritemap character x y))
-      newrenderstate)
-    ))
+    (-> renderstate
+        (syncpanelstoteamcharacters rostercontainer characterpanels teamcharacters)
+        (removedeadcharacterpanels teamcharacters team)        )    ))
 
 ;;
 ;;
@@ -491,17 +502,17 @@
         clickcallbacks (:overlayclickables renderstate) 
         clickedon (clickcallbacks [tilex tiley])
         ]
-    (js/console.log "overlay clicked")
-    (js/console.log event)
+    ;;(js/console.log "overlay clicked")
+    ;;(js/console.log event)
     ;; lookup the clicked tile to see if there is a clickable there
-    (js/console.log (clj->js [tilex tiley]))
-    (js/console.log clickedon)
+    ;;(js/console.log (clj->js [tilex tiley]))
+    ;;(js/console.log clickedon)
     (if clickedon (clickedon))
     ))
 
 (defn- movecallback
   [gamestate character action [targetx targety]]
-  (js/console.log (clj->js [character action]))
+  ;;(js/console.log (clj->js [character action]))
   (*submitplayeraction* #(action/invokemoveaction gamestate character action [targetx targety])))
 
 (defn- attackcallback
@@ -551,11 +562,11 @@
 ;;
 
 (defn createmessagelog [[x y]]
-  (let [logdisplay (createjs/Text. "argh")]
+  (let [logdisplay (createjs/Text. "argh" "12px 'Autour One'" "#222")]
     (doto logdisplay
       (aset "x" x)
       (aset "y" y)
-      (aset "text" "")
+      (aset "text" "Game started.")
       )
     logdisplay
     ))
@@ -565,6 +576,31 @@
         first10messages (take 10 (:loglist gamestate))]
     (aset messagelog "text" (clojure.string/join "\n" (reverse first10messages)))
     renderstate))
+
+;;
+;;
+;; other UI (turn over, etc.)
+;;
+;;
+
+(defn- computerturn [gamestate]
+  (-> gamestate
+    world/advanceturn
+    simplestrat.minimaxAI/executecomputerturn
+    world/advanceturn))
+
+(defn endturnclicked [event]
+  (let [gamestate (:gamestate @displayed-renderstate)]
+    (if (= :team1 (:activeteam gamestate))
+      (*submitplayeraction* computerturn))))
+
+(defn createcontrolpanel [[x y]]
+  (let [controlpanel (createjs/Text. "End Turn" "30px Arial" "#066")]
+    (doto controlpanel
+      (aset "x" x)
+      (aset "y" y)
+      (.addEventListener "click" endturnclicked))
+    controlpanel))
 
 ;;
 ;;
@@ -582,8 +618,7 @@
             (rebuildteamdisplaylist :team2)
             (rebuildoverlay nil)
             (updatemessagelog))]
-    (if
-        (compare-and-set! displayed-renderstate oldrenderstate newrenderstate)
+    (if (compare-and-set! displayed-renderstate oldrenderstate newrenderstate)
       nil ; updated renderstate
       (do ; shouldn't happen
         (js/console.log "Renderstate changed while updating! Forcing new renderstate")
@@ -595,15 +630,18 @@
 ;; initialization functions
 ;;
 ;;
+(def ^:const ^:private mapoffsetpixels [180 60])
+
 
 (defn initializeplayarea []
   (let [stage (:stage @displayed-renderstate)
         tilemap (createeaseljscontainer "tilemap" mapoffsetpixels)
         characters (createeaseljscontainer "characters" mapoffsetpixels)
-        leftRoster (createcharacterroster "team1Roster" :team1 [50 100])
-        rightRoster (createcharacterroster "team2Roster" :team2 [500 100])
+        leftRoster (createcharacterroster "team1Roster" :team1 [30 100])
+        rightRoster (createcharacterroster "team2Roster" :team2 [440 100])
         overlayshape (createjs/Shape.)
-        messagelog (createmessagelog [100 0])]
+        controlpanel (createcontrolpanel [50 300])
+        messagelog (createmessagelog [500 0])]
     (doto stage
       .removeAllChildren
       (.addChild tilemap)
@@ -611,7 +649,8 @@
       (.addChild (:container leftRoster))
       (.addChild (:container rightRoster))
       (.addChild overlayshape)
-      (.addChild messagelog))
+      (.addChild messagelog)
+      (.addChild controlpanel))
     (doto overlayshape
       (aset "x" (get mapoffsetpixels 0))
       (aset "y" (get mapoffsetpixels 1))

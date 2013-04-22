@@ -28,13 +28,13 @@
 (defn makestartingcharacters []
   [
    (world/create-character
-    {:charactername "bob" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
+    {:charactername "angry monster" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
      :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "punch" 1 1 1)]})
    (world/create-character
-    {:charactername "tom" :id 2 :iconindex 130 :coords [8 3] :team :team1 :starthealth 2 
+    {:charactername "tom" :id 2 :iconindex 130 :coords [3 3] :team :team1 :starthealth 2 
      :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "throw" 1 2 1)]})
    (world/create-character
-    {:charactername "shemp" :id 3 :iconindex 191 :coords [8 5] :team :team1 :starthealth 2 
+    {:charactername "shemp" :id 3 :iconindex 191 :coords [3 5] :team :team1 :starthealth 2 
      :actions [(action/createmoveaction "run" 26 2) (action/createmajoraction "shoot" 1 3 1)]})
    ])
 
@@ -69,7 +69,7 @@
   (renderer/initializeplayarea)
   (renderer/setactionhook! changegamestate)
   (renderer/updategamestate! @current-gamestate)
-  (let [characterexamine (world/get-character @current-gamestate 1)
+  #_(let [characterexamine (world/get-character @current-gamestate 1)
         moveactions (action/seqof-charactermoveactions characterexamine)
         movelocations (action/seqof-movelocationsforcharacter @current-gamestate characterexamine nil)
         ]
