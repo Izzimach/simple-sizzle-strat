@@ -128,6 +128,19 @@
     )
   )
 
+;;
+;; action instances basically wrap the action specifics into a data structure (map) that
+;; can be used as a generic object that modifies gamestate, that is "apply this action to the gamestate"
+;; while still being able to access specifics like the action type or gamestate
+;;
+(defn invokeactioninstance
+  [actioninstance]
+  (let [{:keys [gamestate character actiondata args]} actioninstance]
+    (if (ismoveaction? actiondata)
+      (invokemoveaction gamestate character actiondata args)
+      (invokemajoraction gamestate character actiondata args))))
+
+
 (defn invokedefaultmoveaction [gamestate character destination]
   (invokemoveaction gamestate character (getdefaultmoveaction character) destination))
 

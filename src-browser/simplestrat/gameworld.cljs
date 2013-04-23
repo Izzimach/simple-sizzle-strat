@@ -37,7 +37,7 @@
     "team 1"
     "team 2"))
 
-(defn- charactersforteam
+(defn charactersforteam
   "Generates a sequence of all the characters that belong on a specified team." [gamestate team]
   (filter #(= team (:team %)) (vals (:characters gamestate))))
 
