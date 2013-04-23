@@ -31,8 +31,8 @@
            :source-paths ["src-browser"]
            :compiler {
                       :output-to "resources/public/js/simplestrat.js"
-                      :optimizations :whitespace
-                      :pretty-print true
+                      :optimizations :simple
+                      :pretty-print false
                       ;;                      :libs ["closure/library/third_party/closure"]
                       ;;                      :externs ["externs/createjs-externs.js"]
                       }
@@ -42,7 +42,7 @@
             :source-paths ["src-browser" "test-cljs"]
             :compiler {
                        :output-to "target/cljs/testable.js"
-                       :optimizations :whitespace
+                       :optimizations :simple
                        :pretty-print true}}
     }
    :test-commands {"basic-tests" ["phantomjs.exe" "runners/phantomjs.js" "target/cljs/testable.js"]}}

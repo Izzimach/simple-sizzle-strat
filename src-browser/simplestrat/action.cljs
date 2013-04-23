@@ -134,8 +134,8 @@
 ;; while still being able to access specifics like the action type or gamestate
 ;;
 (defn invokeactioninstance
-  [actioninstance]
-  (let [{:keys [gamestate character actiondata args]} actioninstance]
+  [actioninstance gamestate]
+  (let [{:keys [character actiondata args]} actioninstance]
     (if (ismoveaction? actiondata)
       (invokemoveaction gamestate character actiondata args)
       (invokemajoraction gamestate character actiondata args))))

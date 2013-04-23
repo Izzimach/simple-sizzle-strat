@@ -46,14 +46,14 @@
   (let [characterid (get move 1)
         character (world/get-character gamestate characterid)
         makemoveinstance (fn [[actiondata movelocation]] 
-                           {:gamestate gamestate :character character :actiondata actiondata :args movelocation})]
+                           {:character character :actiondata actiondata :args movelocation})]
     (map makemoveinstance (action/seqof-movelocationsforcharacter gamestate character nil))))
 
 (defn- expandattack [gamestate attack]
   (let [characterid (get attack 1)
         character (world/get-character gamestate characterid)
         makeattackinstance (fn [[actiondata target]]
-                             {:gamestate gamestate :character character :actiondata actiondata :args [target]})]
+                             {:character character :actiondata actiondata :args [target]})]
     (map makeattackinstance (action/seqof-attacktargetsforcharacter gamestate character nil))))
 
 (defn- expandaction [gamestate action]
@@ -71,17 +71,35 @@
 
 (defn- findbestaction [gamestate availableactions]
   (let [;; maximize or minimize the evaluation function depending on which team is active
-        choosemax (fn [a b] (let [[aaction avalue] a
+        choosebest (fn [comparefunc a b] (let [[aaction avalue] a
                                   [baction bvalue] b]
-                              (if (> avalue bvalue) a b)))
-        choosemin (fn [a b] (let [[aaction avalue] a
-                                  [baction bvalue] b]
-                              (if (< avalue bvalue) a b)))
+                              (if (comparefunc avalue bvalue) a b)))
         reducer (if (= :team1 (:activeteam gamestate))
-                  choosemax  ; team1
-                  choosemin) ; team2
-        evaluateaction (fn [action] [action (*gameevaluationfunction* (action/invokeactioninstance action))])]
+                  (partial choosebest >)  ; team1 maximizes
+                  (partial choosebest <)) ; team2 minimizes
+        evaluateaction (fn [action] [action (*gameevaluationfunction* (action/invokeactioninstance action gamestate))])]
     (first (reduce reducer (map evaluateaction availableactions)))))
+
+(defn- findbestaction-wholeturn [gamestate]
+  (let [availableactions (possibleactions gamestate)
+        ]
+    (if (empty? availableactions)
+      ;; evaluate action when at the end of turn (no more actions available)
+      [nil (*gameevaluationfunction* gamestate)]
+      ;; not at the end of turn. Try all the possible actions, and recursively
+      ;; check each of those
+      (let [evaluateaction (fn [action]
+                             (let [[restactions rating] (findbestaction-wholeturn (action/invokeactioninstance action gamestate))]
+                               [(cons action restactions) rating]))
+            ;; maximize or minimize the evaluation function depending on which team is active
+            choosebest (fn [comparefunc a b] (let [[aactions avalue] a
+                                                   [bactions bvalue] b]
+                                               (if (comparefunc avalue bvalue) a b)))
+            reducebest (if (= :team1 (:activeteam gamestate))
+                      (partial choosebest >)  ; team1 maximizes
+                      (partial choosebest <)) ; team2 minimizes
+            ]
+        (reduce reducebest (map evaluateaction availableactions))))))
 
 (defn- completeturn
   "If there are still actions left this turn, figure out which ones to use and in what order, based
@@ -91,7 +109,7 @@
         bestaction (findbestaction gamestate availableactions)]
     (if (nil? bestaction)
       []
-      (let [newstate (action/invokeactioninstance bestaction)]
+      (let [newstate (action/invokeactioninstance bestaction gamestate)]
         (cons bestaction (completeturn newstate))))))
 
 (defn- eataction [gamestate]
@@ -99,7 +117,7 @@
         bestaction (findbestaction gamestate availableactions)]
     (if (nil? bestaction)
       nil
-      [bestaction (action/invokeactioninstance bestaction)])))
+      [bestaction (action/invokeactioninstance bestaction gamestate)])))
 
 (defn- computeractions
   "Computes the desired computer actions, and returns them as a 
@@ -109,12 +127,15 @@
   ;; actions. We don't want to generate log messages or other side effects while
   ;; generating this game states, so we turn off the message log and
   ;; other effects
-  (let [virtualgamestate (world/disablemessagelog gamestate)]
+  (let [virtualgamestate (world/disablemessagelog gamestate)
+        [bestactions actionsrating] (findbestaction-wholeturn virtualgamestate)]
+    bestactions
     ))
 
 
 (defn executecomputerturn
   [gamestate]
   (let [computerteam (:activeteam gamestate)
-        actions (computeractions gamestate computerteam)]
-    (reduce #(%1 %2) gamestate actions)))
+        actions (computeractions gamestate computerteam)
+        invokeaction (fn [gamestate actioninstance] (action/invokeactioninstance actioninstance gamestate))]
+    (reduce invokeaction gamestate actions)))
