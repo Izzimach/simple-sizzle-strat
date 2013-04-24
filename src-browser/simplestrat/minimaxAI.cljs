@@ -80,16 +80,18 @@
         evaluateaction (fn [action] [action (*gameevaluationfunction* (action/invokeactioninstance action gamestate))])]
     (first (reduce reducer (map evaluateaction availableactions)))))
 
-(defn- findbestaction-wholeturn [gamestate]
-  (let [availableactions (possibleactions gamestate)
-        ]
+(defn- findbestaction-wholeturn [gamestate lookahead]
+  (let [availableactions (possibleactions gamestate)]
     (if (empty? availableactions)
-      ;; evaluate action when at the end of turn (no more actions available)
-      [nil (*gameevaluationfunction* gamestate)]
+      ;; reached at the end of turn (no more actions available)
+      ;; check to see if we need to look ahead to the next turn, or stop here
+      (if (= 0 lookahead)
+        [nil (*gameevaluationfunction* gamestate)]
+        (findbestaction-wholeturn (world/advanceturn gamestate) (dec lookahead)))
       ;; not at the end of turn. Try all the possible actions, and recursively
       ;; check each of those
       (let [evaluateaction (fn [action]
-                             (let [[restactions rating] (findbestaction-wholeturn (action/invokeactioninstance action gamestate))]
+                             (let [[restactions rating] (findbestaction-wholeturn (action/invokeactioninstance action gamestate) lookahead)]
                                [(cons action restactions) rating]))
             ;; maximize or minimize the evaluation function depending on which team is active
             choosebest (fn [comparefunc a b] (let [[aactions avalue] a
@@ -128,7 +130,7 @@
   ;; generating this game states, so we turn off the message log and
   ;; other effects
   (let [virtualgamestate (world/disablemessagelog gamestate)
-        [bestactions actionsrating] (findbestaction-wholeturn virtualgamestate)]
+        [bestactions actionsrating] (findbestaction-wholeturn virtualgamestate 0)]
     bestactions
     ))
 
