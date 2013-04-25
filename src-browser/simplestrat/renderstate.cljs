@@ -383,16 +383,17 @@
   ;; have a corresponding character
   (let [roster (get-in renderstate [:teamGUIs team])
         {:keys [container panels]} roster
-        numchildren (.getNumChildren container)]
+        numchildren (.getNumChildren container)
+        panelinstances (doall (map #(.getChildAt container %) (range numchildren)))]
     ;;(js/console.log (clj->js characters))
-    (doseq [childindex (range numchildren)
-            :let [childcontainer (.getChildAt container childindex)
-                  childid (.-name childcontainer)]]
+    (doseq [childpanel panelinstances
+            :let [childid (.-name childpanel)]]
       ;;(js/console.log childcontainer)
       ;;(js/console.log childid)
       (when (not-any? #(= childid (:uniqueid %)) characters)
         ;;(js/console.log "removing")
-        (.removeChild container childcontainer)))
+        (.removeChild container childpanel)))
+    ;; TODO remove info panel from the "panels" field of the roster as well!
     renderstate))
 
 (defn syncpanelstoteamcharacters
