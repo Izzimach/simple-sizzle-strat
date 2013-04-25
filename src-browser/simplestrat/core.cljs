@@ -28,13 +28,16 @@
 (defn makestartingcharacters []
   [
    (world/create-character
-    {:charactername "angry monster" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
+    {:charactername "Angry monster" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
+     :actions [(action/createmoveaction "crawl" 1 1) (action/createmajoraction "bite" 1 1 1)]})
+   (world/create-character
+    {:charactername "Angry monster" :id 2 :iconindex 128 :coords [7 4] :team :team2 :starthealth 3 
+     :actions [(action/createmoveaction "crawl" 1 1) (action/createmajoraction "spew" 1 1 1)]})
+   (world/create-character
+    {:charactername "Tom" :id 3 :iconindex 130 :coords [3 3] :team :team1 :starthealth 2 
      :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "punch" 1 1 1)]})
    (world/create-character
-    {:charactername "tom" :id 2 :iconindex 130 :coords [3 3] :team :team1 :starthealth 2 
-     :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "throw" 1 2 1)]})
-   (world/create-character
-    {:charactername "shemp" :id 3 :iconindex 191 :coords [3 5] :team :team1 :starthealth 2 
+    {:charactername "Shemp" :id 4 :iconindex 191 :coords [3 5] :team :team1 :starthealth 2 
      :actions [(action/createmoveaction "run" 26 2) (action/createmajoraction "shoot" 1 3 1)]})
    ])
 
