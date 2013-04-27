@@ -107,6 +107,11 @@
          findspriteforcharacter
          rebuildoverlay)
 
+(defn setcanvascaption [renderstate caption]
+  (let [stage (:stage renderstate)
+        canvas (.-canvas stage)]
+    (aset canvas "title" caption)))
+
 (defn- highlightcharacter
   "Highlights current character. Doesn't modify the clojure-side renderstate"
   [character]
@@ -114,6 +119,7 @@
     (doto renderstate
       (highlightcharacteronmap character)
       (highlightcharacterinroster character)
+      (setcanvascaption (:name character))
       (redraw))))
 
 (defn- unhighlightcharacter [character]
@@ -121,6 +127,7 @@
     (doto renderstate
       (unhighlightcharacteronmap character)
       (unhighlightcharacterinroster character)
+      (setcanvascaption "")
       (redraw))))
 
 (defn getclickablesfor
@@ -306,25 +313,32 @@
   (let [rostercontainer (get-in renderstate [:teamGUIs (:team character) :container])
         sprite-path [:sprites (:team character)]
         panel (createjs/Container.)
+        charactername (createjs/Text.)
         healthtext (createjs/Text. "Health: 0")
         actionsavailabletext (createjs/Text. "Actions Available: ")
         oldspritemap (get-in renderstate sprite-path)
         newspritemap (addcharactersprite oldspritemap character)
         charactersprite (get newspritemap (:uniqueid character))]
+    (doto charactername
+      (aset "text" (:name character))
+      (aset "x" 30)
+      (aset "y" -24))
     (doto charactersprite
       (aset "x" 0)
       (aset "y" 0)
-      (aset "name" "sprite"))
+      (aset "name" "sprite")
+      (scalesprite rostertilescale))
     (doto healthtext
       (aset "x" 30)
       (aset "y" -12)
       (aset "name" "healthtext"))
     (doto actionsavailabletext
       (aset "x" 30)
-      (aset "y" 8)
+      (aset "y" 0)
       (aset "name" "actiontext"))
     (doto panel
       (aset "name" (:uniqueid character))
+      (.addChild charactername)
       (.addChild charactersprite)
       (.addChild healthtext)
       (.addChild actionsavailabletext)
@@ -492,12 +506,30 @@
             ]
       (renderfunc px py))))
 
+(defn- overlaymouseover [event]
+  (let [renderstate @displayed-renderstate
+        overlay (:overlay renderstate)
+        gamestate (:gamestate renderstate)
+        mouseoverpx (- (aget event "stageX") (.-x overlay))
+        mouseoverpy (- (aget event "stageY") (.-y overlay))
+        [tilex tiley] (pixelsxy->tilexy [mouseoverpx mouseoverpy])
+        ;; keys in clickables are of the form [x y]
+        mouseoverdata (:overlaymouseoverdata renderstate) 
+        mouseondata (mouseoverdata [tilex tiley])
+        ]
+    (when mouseondata
+      (setcanvascaption renderstate mouseondata))))
+
+(defn- overlaymouseout [event]
+  (let [renderstate @displayed-renderstate]
+    (setcanvascaption renderstate "")))
+
 (defn- overlayclicked [event]
   (let [renderstate @displayed-renderstate
         overlay (:overlay renderstate)
         gamestate (:gamestate renderstate)
-        clickpx (- (.-stageX event) (.-x overlay))
-        clickpy (- (.-stageY event) (.-y overlay))
+        clickpx (- (aget event "stageX") (.-x overlay))
+        clickpy (- (aget event "stageY") (.-y overlay))
         [tilex tiley] (pixelsxy->tilexy [clickpx clickpy])
         ;; keys in clickables are of the form [x y]
         clickcallbacks (:overlayclickables renderstate) 
@@ -538,6 +570,25 @@
       (reduce addmovecallback {} moves)
       (reduce addattackcallback {} attacks))))
 
+(defn- buildmouseoverdata
+  [renderstate actiondata]
+  (let [{:keys [moves attacks]} actiondata
+        {:keys [gamestate selectedcharacterid selectedaction]} renderstate
+        character (world/get-character gamestate selectedcharacterid)
+        addmovedata (fn [mouseoverdata [action location]] 
+                          (assoc mouseoverdata location (string/join ["Move here using '" (:name action) "'"])))
+        addattackdata (fn [mouseoverdata [action target]]
+                            (let [{:keys [x y]} target
+                                  location [x y]]
+                              (assoc mouseoverdata location (string/join ["Attack here using '" (:name action) "'"]))))
+        ]
+    ;; each callback is a function with parameters [gamestate character action targetx targety]
+    ;; convert move data into clickcallbacks
+    (merge
+      (reduce addmovedata {} moves)
+      (reduce addattackdata {} attacks))))
+
+
 (defn rebuildoverlay
   "Render the overlay which shows the current selected character and possible move/attack
   targets.  Returns the modified renderstate."
@@ -556,7 +607,9 @@
       (rendermovelocations overlay movelocations))
     (when (not-nil? attacktargets)
       (renderattacktargets overlay attacktargets))
-    (assoc renderstate :overlayclickables (buildclickcallbacks renderstate actiondata))))
+    (-> renderstate 
+      (assoc :overlayclickables (buildclickcallbacks renderstate actiondata))
+      (assoc :overlaymouseoverdata (buildmouseoverdata renderstate actiondata)))))
 
 ;;
 ;; text log window
@@ -612,12 +665,17 @@
 (defn updategamestate! [gamestate]
   (let [oldrenderstate @displayed-renderstate
         renderstate (assoc oldrenderstate :gamestate gamestate)
+        selectedcharacterid (:selectedcharacterid renderstate)
+        gamestate (:gamestate renderstate)
+        overlaydata (if selectedcharacterid
+                      (getclickablesfor gamestate (world/get-character gamestate selectedcharacterid) nil)
+                      nil)
         newrenderstate (-> renderstate
             (rebuildmapdisplaylist oldrenderstate)
             (rebuildcharacterdisplaylist)
             (rebuildteamdisplaylist :team1)
             (rebuildteamdisplaylist :team2)
-            (rebuildoverlay nil)
+            (rebuildoverlay overlaydata)
             (updatemessagelog))]
     (if (compare-and-set! displayed-renderstate oldrenderstate newrenderstate)
       nil ; updated renderstate
@@ -639,7 +697,7 @@
         tilemap (createeaseljscontainer "tilemap" mapoffsetpixels)
         characters (createeaseljscontainer "characters" mapoffsetpixels)
         leftRoster (createcharacterroster "team1Roster" :team1 [30 100])
-        rightRoster (createcharacterroster "team2Roster" :team2 [440 100])
+        rightRoster (createcharacterroster "team2Roster" :team2 [400 100])
         overlayshape (createjs/Shape.)
         controlpanel (createcontrolpanel [50 300])
         messagelog (createmessagelog [520 0])]
@@ -655,7 +713,10 @@
     (doto overlayshape
       (aset "x" (get mapoffsetpixels 0))
       (aset "y" (get mapoffsetpixels 1))
-      (.addEventListener "click" overlayclicked))
+      (aset "mouseEnabled" true)
+      (.addEventListener "click" overlayclicked)
+      (.addEventListener "mouseover" overlaymouseover)
+      (.addEventListener "mouseout" overlaymouseout))
     ;; embed direct references to the map and character containers for
     ;; easy manipulation later
     (swap! displayed-renderstate assoc :stage-map tilemap :stage-characters characters)
