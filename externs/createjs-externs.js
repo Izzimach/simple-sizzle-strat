@@ -36,11 +36,26 @@ var createjs = {
 createjs.Stage.addChild = function() {};
 createjs.Stage.removeAllChildren = function() {};
 createjs.Stage.enableMouseOver = function() {};
+createjs.Stage.update = function() {};
+
+createjs.Container.removeAllChildren = function() {};
+createjs.Container.addChild = function() {};
+createjs.Container.removeChild = function() {};
+createjs.Container.getChildByName = function() {};
+createjs.Container.getNumChildren = function() {};
+createjs.Container.getChildAt = function() {};
+
+createjs.BitmapAnimation.gotoAndStop = function() {};
+createjs.BitmapAnimation.addEventListener = function() {};
 
 createjs.Shape = function() {};
-createjs.Shape.graphics = {};
-createjs.Shape.graphics.beginFill = function() {};
-createjs.Shape.graphics.drawRoundRect = function() {};
+createjs.Shape.graphics = function() {};
+createjs.Graphics.beginFill = function() {};
+createjs.Graphics.drawRoundRect = function() {};
+createjs.Graphics.beginStroke = function() {};
+createjs.Graphics.drawCircle = function() {};
+createjs.Graphics.getRGB = function() {};
+
 
 createjs.Text.fillText = function() {};
 
