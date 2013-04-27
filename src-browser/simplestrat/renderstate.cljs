@@ -642,7 +642,7 @@
         rightRoster (createcharacterroster "team2Roster" :team2 [440 100])
         overlayshape (createjs/Shape.)
         controlpanel (createcontrolpanel [50 300])
-        messagelog (createmessagelog [500 0])]
+        messagelog (createmessagelog [520 0])]
     (doto stage
       .removeAllChildren
       (.addChild tilemap)

@@ -9,8 +9,11 @@
 ;; basic game state
 ;;
 
+(defrecord GameState [map characters activeteam actionsleft turn loglist])
+
 (defn makeemptygamestate []
-  {
+  (->GameState nil {} :team2 #{} 0 (list))
+  #_{
    ;; game map as a set of tiles
    :map nil
    ;; all current characters
@@ -22,7 +25,8 @@
    :actionsleft #{}
    ;; index of the current turn, used for effects with a duration
    :turn 0
-   :loglist (list)})
+   :loglist (list)}
+  )
 
 
 ;;
@@ -83,9 +87,8 @@
 (defn consumeaction
   "Remove the specified action from the list of available actions, to indicate that the
   character has already performed this action."
-  [gamestate characterid action]
+  [gamestate characterid actiontype]
   (let [availableactions (:actionsleft gamestate)
-        actiontype (:actiontype action)
         postconsumeactions (disj availableactions [actiontype characterid])]
     (assoc gamestate :actionsleft postconsumeactions)))
 
@@ -142,9 +145,11 @@
 ;; character management
 ;;
 
+(defrecord Character [name uniqueid iconindex x y team health shield actions])
+
 (defn create-character [{:keys [charactername id iconindex coords team starthealth actions]}]
   (let [[x y] coords]
-    {:name charactername
+    #_{:name charactername
      :uniqueid id
      :iconindex iconindex
      :x x
@@ -153,7 +158,9 @@
      :health starthealth
      :shield 0
      :actions actions
-     }))
+     }
+    (map->Character {:name charactername :uniqueid id :x x :y y :iconindex iconindex :team team :health starthealth :shield 0 :actions actions})
+    ))
 
 (defn damage-character [gamestate characterid damageamount damagetype]
   (let [character (get-character gamestate characterid)

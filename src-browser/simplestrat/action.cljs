@@ -2,21 +2,34 @@
   (:require [simplestrat.gameworld :as world]
             [clojure.string :as string]))
 
+
+(defrecord MajorActionData [name iconindex range damage])
+
+(defrecord MoveActionData [name iconindex speed])
+
+(defrecord ActionInstance [character actiondata args])
+
 ;;
 ;; character actions
 ;;
 
-(defn createmajoraction [name icon range damage]
-  {:actiontype :majoraction :name name :range range :damage damage :iconindex icon})
+(defn createmajoraction [name iconindex range damage]
+  #_{:actiontype :majoraction :name name :range range :damage damage :iconindex icon}
+  (->MajorActionData name iconindex range damage)
+  )
 
-(defn createmoveaction [name icon movespeed]
-  {:actiontype :moveaction :name name :speed movespeed :iconindex icon})
+(defn createmoveaction [name iconindex movespeed]
+  #_{:actiontype :moveaction :name name :speed movespeed :iconindex icon}
+  (->MoveActionData name iconindex movespeed)
+  )
 
 (defn- ismoveaction? [action]
-  (= :moveaction (:actiontype action)))
+  #_(= :moveaction (:actiontype action))
+  (instance? MoveActionData action))
 
 (defn- ismajoraction? [action]
-  (= :majoraction (:actiontype action)))
+  #_(= :majoraction (:actiontype action))
+  (instance? MajorActionData action))
 
 (defn seqof-charactermoveactions [character]
   (filter ismoveaction? (:actions character)))
@@ -109,7 +122,7 @@
     (-> gamestate
       (world/logmessage (string/join [(:name character) " moved."]))
       (world/move-character characterid destx desty)
-      (world/consumeaction characterid moveaction)
+      (world/consumeaction characterid :moveaction)
       ))
   )
 
@@ -124,7 +137,7 @@
         damagetargets (fn [curstate targets] (reduce damagetarget curstate targets))]
     (-> gamestate
         (damagetargets targets)
-        (world/consumeaction characterid majoraction))
+        (world/consumeaction characterid :majoraction))
     )
   )
 
@@ -135,7 +148,11 @@
 ;;
 (defn invokeactioninstance
   [actioninstance gamestate]
-  (let [{:keys [character actiondata args]} actioninstance]
+  (let [character (.-character actioninstance)
+        actiondata (.-actiondata actioninstance)
+        args (.-args actioninstance)
+        ;;{:keys [character actiondata args]} actioninstance
+        ]
     (if (ismoveaction? actiondata)
       (invokemoveaction gamestate character actiondata args)
       (invokemajoraction gamestate character actiondata args))))

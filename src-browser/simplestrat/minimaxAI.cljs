@@ -28,15 +28,32 @@
         team2characters (world/charactersforteam gamestate :team2)]
     (- (count team1characters) (count team2characters))))
 
+(defn basicdistanceevaluation
+  "Evaluates based on mean distance of all characters from the center. Used to keep AI
+  characters from wandering when far from enemies."
+  [gamestate]
+  (let [characters (:characters gamestate)
+        centerx (/ (:width (:map gamestate)) 2)
+        disttocenter (fn [x] (Math/abs (- x centerx)))
+        totaldistance (reduce + (map (comp disttocenter :x) characters))]
+    (if (= :team1 (:team gamestate))
+      (- 0 totaldistance)
+      totaldistance)
+    )
+  )
+
 (defn basicevaluation [gamestate]
   (let [healtheval (basichealthevaluation gamestate)
         headcounteval (basicheadcountevaluation gamestate)
+        distanceeval (basicdistanceevaluation gamestate)
         ;; dictate how much each factor affects the final number
         healthfactor 1
-        headcountfactor 0.1]
+        headcountfactor 0.1
+        distancefactor 0.01]
     (+
       (* healtheval healthfactor)
-      (* headcounteval headcountfactor))))
+      (* headcounteval headcountfactor)
+      (* distancefactor distanceeval))))
 
 ;; use the basic evaluation by default
 (set! *gameevaluationfunction* basicevaluation)
@@ -46,14 +63,14 @@
   (let [characterid (get move 1)
         character (world/get-character gamestate characterid)
         makemoveinstance (fn [[actiondata movelocation]] 
-                           {:character character :actiondata actiondata :args movelocation})]
+                           (action/ActionInstance. character actiondata movelocation))]
     (map makemoveinstance (action/seqof-movelocationsforcharacter gamestate character nil))))
 
 (defn- expandattack [gamestate attack]
   (let [characterid (get attack 1)
         character (world/get-character gamestate characterid)
         makeattackinstance (fn [[actiondata target]]
-                             {:character character :actiondata actiondata :args [target]})]
+                             (action/ActionInstance. character actiondata [target]))]
     (map makeattackinstance (action/seqof-attacktargetsforcharacter gamestate character nil))))
 
 (defn- expandaction [gamestate action]
@@ -101,7 +118,9 @@
                       (partial choosebest >)  ; team1 maximizes
                       (partial choosebest <)) ; team2 minimizes
             ]
-        (reduce reducebest (map evaluateaction availableactions))))))
+        (reduce reducebest (map evaluateaction availableactions))
+        ))))
+
 
 (defn- completeturn
   "If there are still actions left this turn, figure out which ones to use and in what order, based
@@ -125,12 +144,14 @@
   "Computes the desired computer actions, and returns them as a 
   sequence of functions to call with the gamestate as the argument."
   [gamestate computerteam]
+  ;;(js/console.profile "AI")
   ;; The AI generate various hypothetical game states to try out various
   ;; actions. We don't want to generate log messages or other side effects while
   ;; generating this game states, so we turn off the message log and
   ;; other effects
   (let [virtualgamestate (world/disablemessagelog gamestate)
         [bestactions actionsrating] (findbestaction-wholeturn virtualgamestate 0)]
+    ;;(js/console.profileEnd "AI")
     bestactions
     ))
 

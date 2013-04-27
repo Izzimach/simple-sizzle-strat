@@ -31,14 +31,20 @@
     {:charactername "Angry monster" :id 1 :iconindex 128 :coords [5 4] :team :team2 :starthealth 2 
      :actions [(action/createmoveaction "crawl" 1 1) (action/createmajoraction "bite" 1 1 1)]})
    (world/create-character
-    {:charactername "Angry monster" :id 2 :iconindex 128 :coords [7 4] :team :team2 :starthealth 3 
+    {:charactername "Angry monster" :id 2 :iconindex 129 :coords [7 4] :team :team2 :starthealth 3 
      :actions [(action/createmoveaction "crawl" 1 1) (action/createmajoraction "spew" 1 1 1)]})
    (world/create-character
-    {:charactername "Tom" :id 3 :iconindex 130 :coords [3 3] :team :team1 :starthealth 2 
+    {:charactername "Angry monster" :id 3 :iconindex 132 :coords [5 6] :team :team2 :starthealth 2 
+     :actions [(action/createmoveaction "crawl" 1 1) (action/createmajoraction "bite" 1 1 1)]})
+   (world/create-character
+    {:charactername "Moe" :id 4 :iconindex 130 :coords [3 3] :team :team1 :starthealth 2 
      :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "punch" 1 1 1)]})
    (world/create-character
-    {:charactername "Shemp" :id 4 :iconindex 191 :coords [3 5] :team :team1 :starthealth 2 
-     :actions [(action/createmoveaction "run" 26 2) (action/createmajoraction "shoot" 1 3 1)]})
+    {:charactername "Shemp" :id 5 :iconindex 191 :coords [3 5] :team :team1 :starthealth 2 
+     :actions [(action/createmoveaction "walk" 26 1) (action/createmajoraction "shoot" 1 3 1)]})
+   (world/create-character
+    {:charactername "Curly" :id 6 :iconindex 184 :coords [3 4] :team :team1 :starthealth 2 
+     :actions [(action/createmoveaction "walk" 1 1) (action/createmajoraction "punch" 1 1 1)]})
    ])
 
 (defn addstartingcharacters [gamestate]

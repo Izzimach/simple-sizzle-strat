@@ -31,10 +31,10 @@
            :source-paths ["src-browser"]
            :compiler {
                       :output-to "resources/public/js/simplestrat.js"
-                      :optimizations :whitespace
-                      :pretty-print false
-                      ;;                      :libs ["closure/library/third_party/closure"]
-                      ;;                      :externs ["externs/createjs-externs.js"]
+                      :optimizations :simple
+                      :pretty-print true
+                      ;;:libs ["closure/library/third_party/closure"]
+                      ;;:externs ["externs/createjs-externs.js"]
                       }
            }
     ;; test suite; gets run by phantomjs

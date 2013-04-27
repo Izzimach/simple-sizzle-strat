@@ -27,11 +27,15 @@ var createjs = {
     "AbstractLoader": function () {},
     "PreloadJS": function () {},
     "TagLoader": function () {},
-    "XHRLoader": function () {}
+    "XHRLoader": function () {},
+
+    "LoadQueue": function() {}
 
 };
 
 createjs.Stage.addChild = function() {};
+createjs.Stage.removeAllChildren = function() {};
+createjs.Stage.enableMouseOver = function() {};
 
 createjs.Shape = function() {};
 createjs.Shape.graphics = {};
@@ -43,3 +47,6 @@ createjs.Text.fillText = function() {};
 createjs.Ticker = function() {};
 createjs.Ticker.setFPS = function() {};
 createjs.Ticker.addListener = function() {};
+
+createjs.LoadQueue.addEventListener = function() {};
+createjs.LoadQueue.loadManifest = function() {};
