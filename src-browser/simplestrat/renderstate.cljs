@@ -668,15 +668,31 @@
     world/advanceturn))
 
 (defn endturnclicked [event]
-  (let [gamestate (:gamestate @displayed-renderstate)]
-    (if (= :team1 (:activeteam gamestate))
-      (*submitplayeraction* computerturn))))
+  (let [renderstate @displayed-renderstate
+        gamestate (:gamestate renderstate)
+        endturnbutton (:controlpanel renderstate)
+        processcomputerturn (fn []
+                              (*submitplayeraction* computerturn)
+                              (doto endturnbutton
+                                (aset "text" "End My Turn")
+                                (aset color "#066"))
+                              (redraw renderstate))
+        ]
+    (when (= :team1 (:activeteam gamestate))
+      (doto endturnbutton
+        (aset color "#A00000")
+        (aset "text" "THINKING...")
+        )
+      (redraw renderstate)
+      (js/setTimeout processcomputerturn 16))))
+
 
 (defn createcontrolpanel [[x y]]
-  (let [controlpanel (createjs/Text. "End Turn" "30px Arial" "#066")]
+  (let [controlpanel (createjs/Text. "End My Turn" "30px Arial" "#066")]
     (doto controlpanel
       (aset "x" x)
       (aset "y" y)
+      (aset "textAlign" "center")
       (.addEventListener "click" endturnclicked))
     controlpanel))
 
@@ -745,7 +761,7 @@
     ;; easy manipulation later
     (swap! displayed-renderstate assoc :stage-map tilemap :stage-characters characters)
     (swap! displayed-renderstate assoc :teamGUIs {:team1 leftRoster :team2 rightRoster :sprites {}})
-    (swap! displayed-renderstate assoc :overlay overlayshape :messagelog messagelog)
+    (swap! displayed-renderstate assoc :overlay overlayshape :messagelog messagelog :controlpanel controlpanel)
     ))
 
 (defn initializerenderer [canvasname]
