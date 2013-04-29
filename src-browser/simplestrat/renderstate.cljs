@@ -348,11 +348,11 @@
       (scalesprite rostertilescale))
     (doto healthtext
       (aset "x" 30)
-      (aset "y" -12)
+      (aset "y" -15)
       (aset "name" "healthtext"))
     (doto actionsavailabletext
       (aset "x" 30)
-      (aset "y" 0)
+      (aset "y" -7)
       (aset "name" "actiontext"))
     (doto panel
       (aset "name" (:uniqueid character))
@@ -365,7 +365,7 @@
             :let [actionsprite (get newspritemap (:uniqueid actiondata))]]
       (doto actionsprite
         (aset "x" (+ 40 (* 20 actionindex)))
-        (aset "y" 10))
+        (aset "y" 13))
       (.addChild panel actionsprite))
     (.addChild rostercontainer panel)
     (-> renderstate

@@ -3,9 +3,9 @@
             [clojure.string :as string]))
 
 
-(defrecord MajorActionData [name uniqueid iconindex range damage description])
+(defrecord MajorActionData [name uniqueid iconindex range damage description attacktype])
 
-(defrecord MoveActionData [name uniqueid iconindex speed description])
+(defrecord MoveActionData [name uniqueid iconindex speed description movetype])
 
 (defrecord ActionInstance [character actiondata args])
 
@@ -13,14 +13,14 @@
 ;; character actions
 ;;
 
-(defn createmajoraction [name uniqueid iconindex range damage description]
+(defn createmajoraction [name uniqueid iconindex range damage description attacktype]
   #_{:actiontype :majoraction :name name :range range :damage damage :iconindex icon}
-  (->MajorActionData name uniqueid iconindex range damage description)
+  (->MajorActionData name uniqueid iconindex range damage description attacktype)
   )
 
-(defn createmoveaction [name uniqueid iconindex movespeed description]
+(defn createmoveaction [name uniqueid iconindex movespeed description movetype]
   #_{:actiontype :moveaction :name name :speed movespeed :iconindex icon}
-  (->MoveActionData name uniqueid iconindex movespeed description)
+  (->MoveActionData name uniqueid iconindex movespeed description movetype)
   )
 
 (defn- ismoveaction? [action]
@@ -126,7 +126,11 @@
       ))
   )
 
-(defn invokemajoraction [gamestate character majoraction targets]
+(defmulti invokemajoraction
+  (fn [g c majoraction t] (:attacktype majoraction)))
+
+(defmethod invokemajoraction :singletarget
+  [gamestate character majoraction targets]
   ;; just apply damage to the target
   (let [damage (:damage majoraction)
         characterid (:uniqueid character)
@@ -140,6 +144,37 @@
         (world/consumeaction characterid :majoraction))
     )
   )
+
+
+(defn- findaoetargets
+  [gamestate target]
+  (let [centerx (:x target)
+        centery (:y target)
+        characters (vals (:characters gamestate))
+        withinone (fn [x1 x2] (let [dist (Math/abs (- x1 x2))] #_(js/console.log x1 x2 dist) (< dist 2)))
+        isinaoe? (fn [character] 
+                   #_(js/console.log (clj->js character)) 
+                   (and (withinone centerx (:x character)) (withinone centery (:y character)) ))]
+    #_(js/console.log centerx centery)
+    #_(js/console.log (clj->js (filter isinaoe? characters)))
+    #_(js/console.log (clj->js characters))
+    (filter isinaoe? characters)))
+
+(defmethod invokemajoraction :burst1
+  [gamestate character majoraction targets]
+  ;; just apply damage to the target
+  (let [damage (:damage majoraction)
+        characterid (:uniqueid character)
+        damagetarget (fn [curstate target]
+                       (-> curstate 
+                           (world/logmessage (string/join [(:name character) " attacks " (:name target)]))
+                           (world/damage-character (:uniqueid target) damage (:name majoraction))))
+        damageaoe (fn [curstate aoetarget]
+                    (reduce damagetarget curstate (findaoetargets curstate aoetarget)))
+        damagetargets (fn [curstate targets] (reduce damageaoe curstate targets))]
+    (-> gamestate
+        (damagetargets targets)
+        (world/consumeaction characterid :majoraction))))
 
 ;;
 ;; action instances basically wrap the action specifics into a data structure (map) that
