@@ -162,11 +162,11 @@
     (map->Character {:name charactername :uniqueid id :x x :y y :iconindex iconindex :team team :health starthealth :shield 0 :actions actions})
     ))
 
-(defn damage-character [gamestate characterid damageamount damagetype]
+(defn damage-character [gamestate characterid damageamount damagedescription]
   (let [character (get-character gamestate characterid)
         newhealth (max 0 (- (:health character) damageamount))
         damagedcharacter (assoc character :health newhealth)
-        damagelogtext (string/join [(:name character) " takes " damageamount " damage."])]
+        damagelogtext (string/join [(:name character) " takes " damageamount " damage from " damagedescription])]
     ;; if this defeats the character, remove them from the world
     (if (= 0 newhealth)
       (-> gamestate

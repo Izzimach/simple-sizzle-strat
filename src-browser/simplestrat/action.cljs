@@ -3,9 +3,9 @@
             [clojure.string :as string]))
 
 
-(defrecord MajorActionData [name iconindex range damage])
+(defrecord MajorActionData [name uniqueid iconindex range damage description])
 
-(defrecord MoveActionData [name iconindex speed])
+(defrecord MoveActionData [name uniqueid iconindex speed description])
 
 (defrecord ActionInstance [character actiondata args])
 
@@ -13,14 +13,14 @@
 ;; character actions
 ;;
 
-(defn createmajoraction [name iconindex range damage]
+(defn createmajoraction [name uniqueid iconindex range damage description]
   #_{:actiontype :majoraction :name name :range range :damage damage :iconindex icon}
-  (->MajorActionData name iconindex range damage)
+  (->MajorActionData name uniqueid iconindex range damage description)
   )
 
-(defn createmoveaction [name iconindex movespeed]
+(defn createmoveaction [name uniqueid iconindex movespeed description]
   #_{:actiontype :moveaction :name name :speed movespeed :iconindex icon}
-  (->MoveActionData name iconindex movespeed)
+  (->MoveActionData name uniqueid iconindex movespeed description)
   )
 
 (defn- ismoveaction? [action]
@@ -133,7 +133,7 @@
         damagetarget (fn [curstate target]
                        (-> curstate 
                            (world/logmessage (string/join [(:name character) " attacks " (:name target)]))
-                           (world/damage-character (:uniqueid target) damage nil)))
+                           (world/damage-character (:uniqueid target) damage (:name majoraction))))
         damagetargets (fn [curstate targets] (reduce damagetarget curstate targets))]
     (-> gamestate
         (damagetargets targets)

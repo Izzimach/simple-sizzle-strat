@@ -17,8 +17,8 @@
                  {:charactername "test character"
                   :id testid1 :iconindex 1 :coords [3 3] :team :team1 :starthealth 2
                   :actions [
-                            (action/createmoveaction "walk" 1 1)
-                            (action/createmajoraction "punch" 1 1 1)
+                            (action/createmoveaction "walk" 1 1 "Walk one space")
+                            (action/createmajoraction "punch" 1 1 1 "Punch an adjacent enemy for 1 damage")
                             ]
                   }))
 
@@ -26,8 +26,8 @@
                  {:charactername "second character"
                   :id testid2 :iconindex 2 :coords [4 4] :team :team2 :starthealth 3
                   :actions [
-                            (action/createmoveaction "run" 2 2)
-                            (action/createmajoraction "shoot" 2 5 2)
+                            (action/createmoveaction "run" 2 2 "Run up to two spaces")
+                            (action/createmajoraction "shoot" 2 5 2 "Shoot an enemy up to two spaces away")
                             ]
                   }))
 

@@ -204,7 +204,24 @@
       (.addEventListener "mouseover" (fn [_] (highlightcharacter character)))
       (.addEventListener "mouseout" (fn [_] (unhighlightcharacter character)))
       (.addEventListener "click" (fn [_] (selectcharacter character))))
-    (assoc spritemap (:uniqueid character) freshbitmap))) 
+    (assoc spritemap (:uniqueid character) freshbitmap)))
+
+(defn- addactionsprite [spritemap actiondata]
+  (let [freshbitmap (createjs/BitmapAnimation. (getspritesheet! "icons"))
+        standardscale (* 0.5 spritescale)
+        hightlightedscale (* 0.6 spritescale)]
+    (.gotoAndStop freshbitmap (:iconindex actiondata))
+    (makestandardsizeandorigin freshbitmap)
+    (scalesprite freshbitmap 0.75)
+    (doto freshbitmap
+      (aset "mouseEnabled" true)
+      (.addEventListener "mouseover" (fn [_] (setcanvascaption @displayed-renderstate (:description actiondata))))
+      (.addEventListener "mouseout" (fn [_] (setcanvascaption @displayed-renderstate "")))
+      (.addEventListener "click" (fn [_] nil)))
+    (assoc spritemap (:uniqueid actiondata) freshbitmap)))
+
+(defn- addactionsprites [spritemap character]
+  (reduce addactionsprite spritemap (:actions character)))
 
 (defn- removecharactersprite [sprites character]
   ;; just dissoc and let the GC collect it, I guess
@@ -308,7 +325,6 @@
     roster
     ))
 
-
 (defn- createcharacterinfopanel [renderstate character orderindex]
   (let [rostercontainer (get-in renderstate [:teamGUIs (:team character) :container])
         sprite-path [:sprites (:team character)]
@@ -317,7 +333,9 @@
         healthtext (createjs/Text. "Health: 0")
         actionsavailabletext (createjs/Text. "Actions Available: ")
         oldspritemap (get-in renderstate sprite-path)
-        newspritemap (addcharactersprite oldspritemap character)
+        newspritemap (-> oldspritemap
+                       (addcharactersprite character)
+                       (addactionsprites character))
         charactersprite (get newspritemap (:uniqueid character))]
     (doto charactername
       (aset "text" (:name character))
@@ -343,6 +361,12 @@
       (.addChild healthtext)
       (.addChild actionsavailabletext)
       (aset "y" (* orderindex 45)))
+    (doseq [[actionindex actiondata] (map-indexed (fn [a b] [a b]) (:actions character))
+            :let [actionsprite (get newspritemap (:uniqueid actiondata))]]
+      (doto actionsprite
+        (aset "x" (+ 40 (* 20 actionindex)))
+        (aset "y" 10))
+      (.addChild panel actionsprite))
     (.addChild rostercontainer panel)
     (-> renderstate
         (assoc-in sprite-path newspritemap)
@@ -689,18 +713,18 @@
 ;; initialization functions
 ;;
 ;;
-(def ^:const ^:private mapoffsetpixels [180 60])
+(def ^:const ^:private mapoffsetpixels [180 14])
 
 
 (defn initializeplayarea []
   (let [stage (:stage @displayed-renderstate)
         tilemap (createeaseljscontainer "tilemap" mapoffsetpixels)
         characters (createeaseljscontainer "characters" mapoffsetpixels)
-        leftRoster (createcharacterroster "team1Roster" :team1 [30 100])
-        rightRoster (createcharacterroster "team2Roster" :team2 [400 100])
+        leftRoster (createcharacterroster "team1Roster" :team1 [30 60])
+        rightRoster (createcharacterroster "team2Roster" :team2 [400 60])
         overlayshape (createjs/Shape.)
-        controlpanel (createcontrolpanel [50 300])
-        messagelog (createmessagelog [520 0])]
+        controlpanel (createcontrolpanel [200 200])
+        messagelog (createmessagelog [10 230])]
     (doto stage
       .removeAllChildren
       (.addChild tilemap)
