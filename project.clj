@@ -31,8 +31,8 @@
            :source-paths ["src-browser"]
            :compiler {
                       :output-to "resources/public/js/simplestrat.js"
-                      :optimizations :whitespace
-                      :pretty-print true
+                      :optimizations :advanced
+                      :pretty-print false
                       :libs ["closure/library/third_party/closure"]
                       :externs ["externs/createjs-externs.js"]
                       }

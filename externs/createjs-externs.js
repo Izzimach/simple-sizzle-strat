@@ -54,6 +54,7 @@ createjs.Graphics.beginFill = function() {};
 createjs.Graphics.drawRoundRect = function() {};
 createjs.Graphics.beginStroke = function() {};
 createjs.Graphics.drawCircle = function() {};
+createjs.Graphics.drawRect = function() {};
 createjs.Graphics.getRGB = function() {};
 
 

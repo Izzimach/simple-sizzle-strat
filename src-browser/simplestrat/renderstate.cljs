@@ -712,17 +712,17 @@
 (defn endturnclicked [event]
   (let [renderstate @displayed-renderstate
         gamestate (:gamestate renderstate)
-        endturnbutton (:controlpanel renderstate)
+        endturnbutton (.getChildByName (:controlpanel renderstate) "text")
         processcomputerturn (fn []
                               (let [newgamestate (*submitplayeraction* computerturn)]
                                 (doto endturnbutton
                                   (aset "text" "End My Turn")
-                                  (aset "color" "#066"))
+                                  (aset "color" "#0aa"))
                                 (redraw @displayed-renderstate)))
         ]
     (when (= :team1 (:activeteam gamestate))
       (doto endturnbutton
-        (aset "color" "#A00000")
+        (aset "color" "#A22")
         (aset "text" "THINKING...")
         )
       (redraw renderstate)
@@ -730,12 +730,22 @@
 
 
 (defn createcontrolpanel [[x y]]
-  (let [controlpanel (createjs/Text. "End My Turn" "30px Arial" "#066")]
+  (let [controlpanel (createjs/Container.)
+        controlpaneltext (createjs/Text. "End My Turn" "30px Arial" "#0aa")
+        controlpanelbkg (createjs/Shape.)
+        bkg-graphics (.-graphics controlpanelbkg)]
+    (doto bkg-graphics
+      (.beginFill "#222")
+      (.drawRect -100 0 200 32))
     (doto controlpanel
       (aset "x" x)
       (aset "y" y)
-      (aset "textAlign" "center")
+      (.addChild controlpanelbkg)
+      (.addChild controlpaneltext)
       (.addEventListener "click" endturnclicked))
+    (doto controlpaneltext
+      (aset "name" "text")
+      (aset "textAlign" "center"))
     controlpanel))
 
 ;;
