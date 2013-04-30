@@ -1,20 +1,25 @@
 <html>
 <head>
-    <link href='http://fonts.googleapis.com/css?family=Autour+One' rel='stylesheet' type='text/css'>
-    <title>Turn-Based Mayhem</title>
-    <style>
-    body, html { margin:0; padding: 0; overflow:hidden; font-family:Arial; font-size:20px }
-    #cr-stage { border:2px solid black; margin:5px auto; color:white }
-    </style>
+  <link href='http://fonts.googleapis.com/css?family=Autour+One' rel='stylesheet' type='text/css'>
+  <title>Super Mayhem Squad</title>
+  <style>
+  body, html { margin:0; padding: 0; overflow:hidden; font-family:Tacoma; font-size:20px; }
+  h1,h2 { text-align: center;}
+  #target { border:2px solid black; color:white;}
+  #content { width: 604px; margin: 0 auto;}
+  </style>
 </head>
 <body>
-<div id="content">
-  <canvas width=800 height=600 id="target"> </canvas>
-  <script type="text/javascript" src="js/easeljs-NEXT.min.js"></script>
-  <script type="text/javascript" src="js/preloadjs-NEXT.min.js"></script>
-  <!--script type="text/javascript" src="js/crafty-min.js"></script-->
-  <script type="text/javascript" src="js/simplestrat.js"></script>
-</div>
-</body>
+  <h1>Super Mayhem Squad</h1>
+  <h2>Created as the April entry into the <a href="http://onegameamonth.com/">OneGameAMonth</a> challenge</h2>
+  <div id="content">
+    <canvas width=600 height=500 id="target"> </canvas>
+    <script type="text/javascript" src="js/easeljs-NEXT.min.js"></script>
+    <script type="text/javascript" src="js/preloadjs-NEXT.min.js"></script>
+    <!--script type="text/javascript" src="js/crafty-min.js"></script-->
+    <script type="text/javascript" src="js/simplestrat.js"></script>
+  </div>
+  <div>A simple turn-based tactics-style game written in the Clojurescript language.  Uses the <a href="http://forums.tigsource.com/index.php?topic=31078.0">TIGSource Community's Free Placeholder Graphics</a> and the <a href="http://createjs.com">createjs</a> Javascript library.</div>
+  <body>
 </html>
 

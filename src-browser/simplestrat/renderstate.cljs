@@ -32,9 +32,13 @@
 ;; the global game state, create a function to modify the game state and "send" it to
 ;; submitplayeraction
 (def *submitplayeraction*)
+(def *restartgame*)
+
 (defn setactionhook! [submitfunc]
   (set! *submitplayeraction* submitfunc))
 
+(defn setrestarthook! [restartfunc]
+  (set! *restartgame* restartfunc))
 ;;
 ;;
 ;; current renderstate, contains various rendering objects. These are
@@ -667,20 +671,58 @@
     simplestrat.minimaxAI/executecomputerturn
     world/advanceturn))
 
+(defn- teamXwon? [gamestate team]
+  (let [otherteam (world/nextturnteamfrom team)]
+    (= 0 (count (world/charactersforteam gamestate otherteam)))))
+
+(defn- playerwon? [gamestate] (teamXwon? gamestate :team1))
+
+(defn- computerwon? [gamestate] (teamXwon? gamestate :team2))
+
+(defn- makedialogGUI [text]
+  (let [newpanel (createjs/Container.)
+        newtext (createjs/Text. text "30px Arial")
+        bkg (createjs/Shape.)
+        bkg-graphics (.-graphics bkg)
+        renderstate @displayed-renderstate
+        stage (:stage renderstate)]
+    (doto bkg-graphics
+      (.beginFill "#a0a0a0")
+      (.drawRect -180 0 360 35))
+    (doto newtext
+      (aset "x" 0)
+      (aset "textAlign" "center"))
+    (doto newpanel
+      (aset "x" 300)
+      (aset "y" 200)
+      (.addChild bkg)
+      (.addChild newtext)
+      (.addEventListener "click" (fn [_] (js/console.log "restarting") (*restartgame*))))
+    (.addChild stage newpanel)
+    (redraw renderstate)))
+
+(defn- makewinnerGUI []
+  (js/console.log "Player won!")
+  (makedialogGUI "You win! Click to restart"))
+
+(defn- makeloserGUI []
+  (js/console.log "Computer won!")
+  (makedialogGUI "You lose! Click to restart"))
+
 (defn endturnclicked [event]
   (let [renderstate @displayed-renderstate
         gamestate (:gamestate renderstate)
         endturnbutton (:controlpanel renderstate)
         processcomputerturn (fn []
-                              (*submitplayeraction* computerturn)
-                              (doto endturnbutton
-                                (aset "text" "End My Turn")
-                                (aset color "#066"))
-                              (redraw renderstate))
+                              (let [newgamestate (*submitplayeraction* computerturn)]
+                                (doto endturnbutton
+                                  (aset "text" "End My Turn")
+                                  (aset "color" "#066"))
+                                (redraw @displayed-renderstate)))
         ]
     (when (= :team1 (:activeteam gamestate))
       (doto endturnbutton
-        (aset color "#A00000")
+        (aset "color" "#A00000")
         (aset "text" "THINKING...")
         )
       (redraw renderstate)
@@ -722,6 +764,9 @@
       (do ; shouldn't happen
         (js/console.log "Renderstate changed while updating! Forcing new renderstate")
         (reset! displayed-renderstate newrenderstate)))
+    (cond
+      (playerwon? gamestate) (makewinnerGUI)
+      (computerwon? gamestate) (makeloserGUI))
     (redraw newrenderstate)))
 
 ;;
