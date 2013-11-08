@@ -10,4 +10,4 @@ The project is built using [Leiningen](http://leiningen.org/), a build tool for 
 
     lein cljsbuild once
 
-which produces the index.html and associated files in [code]resources/public[/code]. To play you need to run an HTTP server there; opening index.html directly in the browser won't work due to cross-origin request problems.
+which produces the index.html and associated files in `resources/public`. To play you need to run an HTTP server there; opening index.html directly in the browser won't work due to cross-origin request problems.
